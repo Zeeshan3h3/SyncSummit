@@ -5,11 +5,12 @@ import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ path: '../.env' });
 import { connectDB } from './config/db.js';
 import authRoutes from './routes/auth.js';
-import eventRoutes from './routes/events.js';
-import adminRoutes from './routes/admin.js';
+// import eventRoutes from './routes/events.js';
+// import adminRoutes from './routes/admin.js';
 
 
 const app = express();
@@ -27,11 +28,13 @@ app.use(cookieParser());
 const limiter = rateLimit({ windowMs: 15*60*1000, max: 100});
 app.use('/api', limiter);
 app.use('/api/auth', authRoutes);
-app.use('/api/event', eventRoutes);
-app.use('/api/admin', adminRoutes);
+// app.use('/api/event', eventRoutes);
+// app.use('/api/admin', adminRoutes);
 
+// Error handling middleware (must be after routes)
 app.use((err, req, res, next) => {
-    res.status(err.status || 500).json({ error: err.message });
+    console.error(err);
+    res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
 });
 
 await connectDB();
