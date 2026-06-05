@@ -1,15 +1,21 @@
+import express from 'express';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import { authenticate } from '../middleware/auth.js';
+import Inventory from '../models/Inventory.js';
+import Order from '../models/Order.js';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_SECRET
-});
+const router = express.Router();
 
-// Step 1: Create order (user clicks Buy)
+
 router.post('/create-order', authenticate, async (req, res, next) => {
   try {
-    // Atomic check — only decrement if quantity > 0
+    
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_SECRET
+    });
+
     const item = await Inventory.findOneAndUpdate(
       { _id: req.body.itemId, quantity: { $gt: 0 } },
       { $inc: { quantity: -1 } },
@@ -25,7 +31,7 @@ router.post('/create-order', authenticate, async (req, res, next) => {
   } catch(err) { next(err); }
 });
 
-// Step 2: Verify payment after Razorpay checkout
+
 router.post('/verify', authenticate, async (req, res, next) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
   const body = razorpay_order_id + '|' + razorpay_payment_id;
@@ -41,3 +47,5 @@ router.post('/verify', authenticate, async (req, res, next) => {
   );
   res.json({ success: true });
 });
+
+export default router;

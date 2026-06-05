@@ -1,3 +1,6 @@
+import mongoose from 'mongoose';
+const { Schema } = mongoose;
+
 const eventSchema = new Schema({
   title: { type: String, required: true },
   description: String,
