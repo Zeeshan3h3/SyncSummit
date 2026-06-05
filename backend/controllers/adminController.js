@@ -53,7 +53,7 @@ export const getFinancials = async (req, res, next) => {
     // If no orders yet, return 0
     const financials = stats.length > 0 ? stats[0] : { totalRevenue: 0, successfulOrders: 0 };
     
-    // Divide by 100 because amount is stored in paise/cents
+
     res.json({
       totalRevenueINR: financials.totalRevenue / 100,
       successfulOrders: financials.successfulOrders

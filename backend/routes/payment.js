@@ -48,4 +48,43 @@ router.post('/verify', authenticate, async (req, res, next) => {
   res.json({ success: true });
 });
 
+// WEBHOOK: Real-time server-to-server updates from Razorpay
+// NOTE: No 'authenticate' middleware here because Razorpay's servers are calling this, not our users!
+router.post('/webhook', express.json(), async (req, res, next) => {
+  try {
+    const signature = req.headers['x-razorpay-signature'];
+    
+    // Cryptographically verify that this request actually came from Razorpay
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
+      .update(JSON.stringify(req.body))
+      .digest('hex');
+
+    if (expectedSignature !== signature) {
+      return res.status(400).json({ error: 'Invalid webhook signature' });
+    }
+
+    // Razorpay sends different events. We only care about payment success or failure.
+    const event = req.body.event;
+    const paymentEntity = req.body.payload.payment.entity;
+    
+    if (event === 'payment.captured') {
+      await Order.findOneAndUpdate(
+        { razorpayOrderId: paymentEntity.order_id },
+        { status: 'paid' }
+      );
+    } else if (event === 'payment.failed') {
+      await Order.findOneAndUpdate(
+        { razorpayOrderId: paymentEntity.order_id },
+        { status: 'failed' }
+      );
+    }
+
+    // Always return a 200 OK immediately so Razorpay knows we received it
+    res.status(200).json({ received: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;
