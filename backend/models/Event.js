@@ -5,6 +5,7 @@ const eventSchema = new Schema({
   title: { type: String, required: true },
   description: String,
   venue: String,
+  imageUrl: String,
   startTime: Date,
   endTime: Date,
   speakers: [{ name: String, bio: String, topic: String }],
