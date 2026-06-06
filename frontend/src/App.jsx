@@ -8,6 +8,9 @@ import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Products from './pages/Products.jsx';
+import ProductDetail from './pages/ProductDetail.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import EventDetail from './pages/EventDetail.jsx';
 
 // Placeholder components that will be replaced in Phase 2
 const UserDashboard = () => <div>User Dashboard</div>;
@@ -53,13 +56,15 @@ const App = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/products" element={<Products />} />
+        <Route path="/products/:id" element={<ProductDetail />} />
+        <Route path="/events/:id" element={<EventDetail />} />
 
         {/* Protected routes (any logged in user) */}
         <Route 
           path="/dashboard" 
           element={
             <ProtectedRoute>
-              <UserDashboard />
+              <Dashboard />
             </ProtectedRoute>
           } 
         />
