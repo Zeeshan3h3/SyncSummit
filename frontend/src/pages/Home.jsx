@@ -120,7 +120,8 @@ const Home = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
               <FadeIn delay={0}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '24px', height: '1px', background: 'var(--orchid)', opacity: 0.4 }} />
+                  <img src="/OnlyLogoBgRemoved.png" alt="Icon" style={{ height: '32px', opacity: 0.9, transform: 'scale(1.6)', transformOrigin: 'left center' }} onError={(e) => e.target.style.display = 'none'} />
+                  <div style={{ width: '32px', height: '1px', background: 'var(--orchid)', opacity: 0.4, marginLeft: '24px' }} />
                   <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--orchid)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                     JU E-Cell · SyncSummit 2025
                   </span>
@@ -175,8 +176,11 @@ const Home = () => {
               className="desktop-only"
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}
             >
-              <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-                STARTS IN
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                  STARTS IN
+                </div>
+                <img src="/OnlyLogoBgRemoved.png" alt="SyncSummit Logo" style={{ height: '40px', opacity: 0.3, transform: 'scale(2.5)', transformOrigin: 'right top' }} onError={(e) => e.target.style.display = 'none'} />
               </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', borderBottom: '1px solid var(--border-mid)', paddingBottom: '24px' }}>

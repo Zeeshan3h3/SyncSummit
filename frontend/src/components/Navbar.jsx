@@ -27,7 +27,8 @@ const Navbar = () => {
       }}>
         {/* Left: Logo */}
         <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-          <div style={{ display: 'flex', letterSpacing: '-0.04em' }}>
+          <img src="/MainLogoHorizontalBgRemoved.png" alt="SyncSummit" style={{ height: '48px', width: 'auto', transform: 'scale(1.9)', transformOrigin: 'left center' }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+          <div style={{ display: 'none', letterSpacing: '-0.04em' }}>
             <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: '24px', color: 'var(--violet)' }}>SYNC</span>
             <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: '24px', color: 'var(--text-primary)' }}>SUMMIT</span>
           </div>

@@ -11,10 +11,13 @@ const Footer = () => {
         
         {/* Column 1 — Brand */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', letterSpacing: '-0.04em' }}>
-            <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: '24px', color: 'var(--violet)' }}>SYNC</span>
-            <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: '24px', color: 'var(--text-primary)' }}>SUMMIT</span>
-          </div>
+          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+            <img src="/MainLogoHorizontalBgRemoved.png" alt="SyncSummit" style={{ height: '64px', width: 'auto', transform: 'scale(1.7)', transformOrigin: 'left center' }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+            <div style={{ display: 'none', letterSpacing: '-0.04em' }}>
+              <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: '24px', color: 'var(--violet)' }}>SYNC</span>
+              <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: '24px', color: 'var(--text-primary)' }}>SUMMIT</span>
+            </div>
+          </Link>
           <span style={{ fontFamily: 'DM Sans', fontSize: '13px', color: 'var(--text-muted)' }}>Jadavpur University E-Cell</span>
           <span style={{ fontFamily: 'DM Sans', fontSize: '12px', color: 'var(--text-muted)', marginTop: '32px' }}>© 2025 JU E-Cell. All rights reserved.</span>
         </div>

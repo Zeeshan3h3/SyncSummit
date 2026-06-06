@@ -5,9 +5,9 @@ import axiosInstance from './api/axios.js';
 import useAuthStore from './store/authStore.js';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Home from './pages/Home.jsx';
+import Login from './pages/Login.jsx';
 
 // Placeholder components that will be replaced in Phase 2
-const Login = () => <div>Login Page</div>;
 const Register = () => <div>Register Page</div>;
 const UserDashboard = () => <div>User Dashboard</div>;
 const AdminDashboard = () => <div>Admin Dashboard</div>;

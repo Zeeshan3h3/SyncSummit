@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export const MetalButton = ({ variant = 'default', size = 'md', className = '', children, ...props }) => {
+export const MetalButton = ({ variant = 'default', size = 'md', className = '', style = {}, children, ...props }) => {
   const baseStyle = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     borderRadius: 'var(--radius-md)', fontWeight: 600, fontFamily: 'DM Sans',
@@ -27,7 +27,7 @@ export const MetalButton = ({ variant = 'default', size = 'md', className = '', 
     <motion.button
       whileHover={{ y: -2, filter: 'brightness(1.1)' }}
       whileTap={{ scale: 0.96 }}
-      style={{ ...baseStyle, ...sizes[size], ...variants[variant] }}
+      style={{ ...baseStyle, ...sizes[size], ...variants[variant], ...style }}
       className={className}
       {...props}
     >
@@ -57,7 +57,7 @@ export const LiquidButton = ({ children, className = '', style = {}, ...props })
   );
 };
 
-export const Button = ({ variant = 'outline', children, className = '', ...props }) => {
+export const Button = ({ variant = 'outline', children, className = '', style = {}, ...props }) => {
   const baseStyle = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     borderRadius: 'var(--radius-sm)', fontWeight: 500, fontFamily: 'DM Sans',
@@ -75,7 +75,7 @@ export const Button = ({ variant = 'outline', children, className = '', ...props
     <motion.button
       whileHover={{ y: -1, borderColor: variant === 'outline' ? 'var(--text-secondary)' : undefined }}
       whileTap={{ scale: 0.96 }}
-      style={{ ...baseStyle, ...variants[variant] }}
+      style={{ ...baseStyle, ...variants[variant], ...style }}
       className={className}
       {...props}
     >
