@@ -6,9 +6,10 @@ import useAuthStore from './store/authStore.js';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
+import Products from './pages/Products.jsx';
 
 // Placeholder components that will be replaced in Phase 2
-const Register = () => <div>Register Page</div>;
 const UserDashboard = () => <div>User Dashboard</div>;
 const AdminDashboard = () => <div>Admin Dashboard</div>;
 const SuperAdminPanel = () => <div>Super Admin Panel</div>;
@@ -51,6 +52,7 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/products" element={<Products />} />
 
         {/* Protected routes (any logged in user) */}
         <Route 
