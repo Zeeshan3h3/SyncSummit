@@ -75,17 +75,7 @@ const ChevronDownIcon = () => (
   </svg>
 );
 
-// MOCK DATA
-const MOCK_EVENTS = [
-  { id: "evt-001", name: "NexusHack 2025", type: "HACKATHON", tagline: "48 hours. One problem. Ship or go home.", date: "Nov 15–16, 2025", venue: "Main Auditorium, JU", prize_pool: "₹50,000", capacity: 200, registered: 148, status: "OPEN", is_featured: true, team_size: "Solo / 2–4" },
-  { id: "evt-002", name: "Consult IQ — Business Case Marathon", type: "CASE STUDY", tagline: "Crack real consulting cases under time pressure.", date: "Nov 15, 2025", venue: "Seminar Hall A, JU", prize_pool: "₹20,000", capacity: 80, registered: 79, status: "CLOSING SOON", is_featured: false },
-  { id: "evt-003", name: "Launchpad — Early Stage Startup Pitch", type: "STARTUP PITCH", tagline: "Present your idea to a panel of angel investors.", date: "Nov 16, 2025", venue: "Innovation Lab, JU", prize_pool: "₹30,000 + investor meetings", capacity: 30, registered: 30, status: "FULL", is_featured: false },
-  { id: "evt-004", name: "DesignDrift — Product Design Sprint", type: "WORKSHOP", tagline: "Go from zero to prototype in 6 hours.", date: "Nov 15, 2025", venue: "Design Studio, JU", prize_pool: null, capacity: 50, registered: 23, status: "OPEN", is_featured: false },
-  { id: "evt-005", name: "Venture Voices — Founder Panel", type: "PANEL TALK", tagline: "Founders share what building really looks like.", date: "Nov 17, 2025", venue: "Open Amphitheatre, JU", prize_pool: null, capacity: 500, registered: 214, status: "OPEN", is_featured: false },
-  { id: "evt-006", name: "CodeCraft — Competitive Programming", type: "HACKATHON", tagline: "DSA under pressure. Three hours. One winner.", date: "Nov 16, 2025", venue: "CS Department Lab, JU", prize_pool: "₹15,000", capacity: 120, registered: 120, status: "FULL", is_featured: false },
-  { id: "evt-007", name: "Growth Lab — Digital Marketing Workshop", type: "WORKSHOP", tagline: "Learn what actually moves the numbers.", date: "Nov 15, 2025", venue: "Seminar Hall B, JU", prize_pool: null, capacity: 60, registered: 41, status: "OPEN", is_featured: false },
-  { id: "evt-008", name: "SyncSummit Closing Ceremony", type: "PANEL TALK", tagline: "Award announcements. Reflections. What's next.", date: "Nov 17, 2025", venue: "Main Auditorium, JU", prize_pool: null, capacity: 1000, registered: 342, status: "OPEN", is_featured: false }
-];
+const MOCK_EVENTS = [];
 
 const EventCard = ({ event, index }) => {
   const isFull = event.status === 'FULL';

@@ -1,11 +1,11 @@
-
 import User from '../models/User.js';
 import Order from '../models/Order.js';
+import Event from '../models/Event.js';
+import Product from '../models/Product.js';
 
 // GET all users (Admin/Superadmin)
 export const getAllUsers = async (req, res, next) => {
   try {
-    // Exclude passwords from the result for security
     const users = await User.find().select('-password');
     res.json(users);
   } catch (err) {
@@ -17,7 +17,6 @@ export const getAllUsers = async (req, res, next) => {
 export const changeUserRole = async (req, res, next) => {
   try {
     const { role } = req.body;
-    // Validate role against enum manually just in case, though Mongoose runValidators catches it too
     if (!['user', 'admin', 'superadmin'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
@@ -38,7 +37,6 @@ export const changeUserRole = async (req, res, next) => {
 // GET financials (Superadmin only)
 export const getFinancials = async (req, res, next) => {
   try {
-    // Use MongoDB Aggregation pipeline to quickly calculate total revenue
     const stats = await Order.aggregate([
       { $match: { status: 'paid' } },
       { 
@@ -50,13 +48,42 @@ export const getFinancials = async (req, res, next) => {
       }
     ]);
 
-    // If no orders yet, return 0
     const financials = stats.length > 0 ? stats[0] : { totalRevenue: 0, successfulOrders: 0 };
     
-
     res.json({
       totalRevenueINR: financials.totalRevenue / 100,
       successfulOrders: financials.successfulOrders
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET system stats (Superadmin only)
+export const getSystemStats = async (req, res, next) => {
+  try {
+    const usersCount = await User.countDocuments();
+    const eventsCount = await Event.countDocuments();
+    const productsCount = await Product.countDocuments();
+    const ordersCount = await Order.countDocuments();
+    
+    const stats = await Order.aggregate([
+      { $match: { status: 'paid' } },
+      { 
+        $group: { 
+          _id: null, 
+          totalRevenue: { $sum: "$amount" }
+        } 
+      }
+    ]);
+    const revenue = stats.length > 0 ? stats[0].totalRevenue / 100 : 0;
+
+    res.json({
+      users: usersCount,
+      events: eventsCount,
+      products: productsCount,
+      orders: ordersCount,
+      revenue
     });
   } catch (err) {
     next(err);

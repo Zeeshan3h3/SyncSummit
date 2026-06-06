@@ -13,8 +13,10 @@ const Navbar = () => {
   const links = [
     { label: 'Events', path: '/events' },
     { label: 'Products', path: '/products' },
-    { label: 'Schedule', path: '/schedule' },
-    { label: 'Speakers', path: '/speakers' }
+    { label: 'Cart', path: '/cart' },
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'Speakers', path: '/speakers' },
+    { label: 'Contact Us', path: '/contact' }
   ];
 
   return (

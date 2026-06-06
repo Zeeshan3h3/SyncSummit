@@ -11,6 +11,7 @@ dotenv.config({ path: '../.env' });
 import { connectDB } from './config/db.js';
 import authRoutes from './routes/auth.js';
 import eventRoutes from './routes/events.js';
+import productRoutes from './routes/products.js';
 import adminRoutes from './routes/admin.js';
 
 
@@ -30,6 +31,7 @@ const limiter = rateLimit({ windowMs: 15*60*1000, max: 100});
 app.use('/api', limiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/event', eventRoutes);
+app.use('/api/products', productRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payment', paymentRoutes); 
 

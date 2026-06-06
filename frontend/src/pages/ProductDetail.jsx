@@ -6,6 +6,7 @@ import { io } from 'socket.io-client';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { MetalButton, LiquidButton } from '../components/ui/Buttons';
+import axiosInstance from '../api/axios';
 
 // Helper Icons
 const StarFilled = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--orchid)" stroke="var(--orchid)" strokeWidth="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
@@ -46,53 +47,17 @@ const Silhouette = ({ category, size = 120 }) => {
   );
 };
 
-// Mock API Call
+// API Call
 const fetchProductDetails = async (id) => {
-  await new Promise(r => setTimeout(r, 1200));
-  if (id === '999') return null; // Simulate 404
-  return {
-    id: parseInt(id),
-    name: "SyncSummit Oversized Hoodie",
-    category: "Apparel",
-    price: 1499,
-    original_price: 1799,
-    stock: 12,
-    rating: 4.7,
-    reviewsCount: 23,
-    sizes: [
-      { label: "S", available: true },
-      { label: "M", available: true },
-      { label: "L", available: false },
-      { label: "XL", available: true },
-      { label: "XXL", available: true }
-    ],
-    description: [
-      "The SyncSummit 2025 Official Hoodie is made from 380 GSM French terry cotton blend. Designed for the long build sessions and the early Kolkata mornings. Heavy-weight, pre-washed, and built to last well past the event.",
-      "Features the SyncSummit wordmark on the chest and the E-Cell founding year on the left sleeve cuff. Unisex fit, runs true to size."
-    ],
-    specifications: {
-      "Material": "80% Cotton, 20% Polyester",
-      "GSM": "380",
-      "Fit": "Oversized, Drop-shoulder",
-      "Sizes Available": "S, M, L, XL, XXL",
-      "Colors": "Midnight Black, Summit Violet",
-      "Print Method": "High-density Puff Print"
-    },
-    reviews: [
-      { name: "Aarav Sharma", date: "May 12, 2025", rating: 5, text: "Incredibly thick and comfortable. I basically lived in this during the hackathon." },
-      { name: "Priya Patel", date: "May 10, 2025", rating: 4, text: "Great quality but runs a little too big. Definitely size down if you don't want it super baggy." },
-      { name: "Rahul Verma", date: "May 08, 2025", rating: 5, text: "The puff print detail is immaculate. Best merch I've gotten at a summit." }
-    ],
-    images: 4 // Simulate a thumbnail strip
-  };
+  try {
+    const res = await axiosInstance.get(`/products/${id}`);
+    return res.data;
+  } catch (err) {
+    return null;
+  }
 };
 
-const RELATED_PRODUCTS = [
-  { id: 2, name: 'Event T-Shirt 2025', category: 'Apparel', price: 599, original_price: 799, stock: 4 },
-  { id: 3, name: 'SyncSummit Cap', category: 'Accessories', price: 349, stock: 100 },
-  { id: 4, name: 'Cotton Tote Bag', category: 'Accessories', price: 249, stock: 200 },
-  { id: 5, name: 'Speaker Notes Sticker Pack', category: 'Accessories', price: 99, stock: 300 }
-];
+const RELATED_PRODUCTS = [];
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -159,12 +124,12 @@ const ProductDetail = () => {
     const savedCart = sessionStorage.getItem('syncSummitCart');
     let items = savedCart ? JSON.parse(savedCart) : [];
     
-    const existingIdx = items.findIndex(i => i.product_id === product.id && i.size === selectedSize);
+    const existingIdx = items.findIndex(i => i.product_id === product._id && i.size === selectedSize);
     if (existingIdx >= 0) {
       items[existingIdx].quantity += quantity;
     } else {
       items.push({ 
-        product_id: product.id, 
+        product_id: product._id, 
         name: product.name, 
         price: product.price, 
         quantity,
@@ -184,10 +149,9 @@ const ProductDetail = () => {
   };
 
   const handleBuyNow = () => {
-    // Basic Buy Now logic
     if (product.stock === 0) return;
-    toast('Proceeding to checkout...', { icon: '💳', style: { background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontFamily: 'DM Sans' }});
-    // In real app, redirect to checkout or auth
+    handleAddToCart();
+    navigate('/cart');
   };
 
   if (isLoading) {

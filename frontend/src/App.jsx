@@ -9,6 +9,7 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Products from './pages/Products.jsx';
 import ProductDetail from './pages/ProductDetail.jsx';
+import Cart from './pages/Cart.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Events from './pages/Events.jsx';
 import EventDetail from './pages/EventDetail.jsx';
@@ -16,6 +17,8 @@ import AdminDashboard from './pages/AdminDashboard.jsx';
 import SuperAdminPanel from './pages/SuperAdminPanel.jsx';
 import Unauthorized from './pages/Unauthorized.jsx';
 import NotFound from './pages/NotFound.jsx';
+import ContactUs from './pages/ContactUs.jsx';
+import Speakers from './pages/Speakers.jsx';
 
 // Root component that handles routing and the startup /me check
 const App = () => {
@@ -57,6 +60,9 @@ const App = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/products" element={<Products />} />
         <Route path="/products/:id" element={<ProductDetail />} />
+        <Route path="/contact" element={<ContactUs />} />
+        <Route path="/speakers" element={<Speakers />} />
+        <Route path="/cart" element={<Cart />} />
         <Route path="/events" element={<Events />} />
         <Route path="/events/:id" element={<EventDetail />} />
         <Route path="/unauthorized" element={<Unauthorized />} />

@@ -16,24 +16,28 @@ const pageVariants = {
 // --- SYSTEM TAB ---
 const SystemTab = () => {
   const [stats, setStats] = useState({
-    users: 1240, events: 15, products: 42, revenue: 1450000, orders: 856
+    users: 0, events: 0, products: 0, revenue: 0, orders: 0
   });
   const [connections, setConnections] = useState([]);
 
   useEffect(() => {
+    // Fetch stats from backend
+    const fetchStats = async () => {
+      try {
+        const { data } = await axiosInstance.get('/admin/stats');
+        setStats(data);
+      } catch (err) {
+        toast.error('Failed to fetch system stats');
+      }
+    };
+    fetchStats();
+
     // Mock socket logic
     const socket = io('http://localhost:5000');
     socket.emit('join_superadmin');
     socket.on('admin_connections', (data) => {
       setConnections(data);
     });
-
-    // Mock initial data
-    setConnections([
-      { id: 'usr_89f2', ip: '192.168.1.***', since: new Date().toISOString(), room: 'admin' },
-      { id: 'usr_a1b2', ip: '10.0.0.***', since: new Date(Date.now() - 300000).toISOString(), room: 'user:usr_a1b2' },
-      { id: 'usr_c3d4', ip: '172.16.0.***', since: new Date(Date.now() - 900000).toISOString(), room: 'event:evt_55' },
-    ]);
 
     return () => socket.disconnect();
   }, []);
@@ -118,14 +122,22 @@ const SystemTab = () => {
 
 // --- ROLE MANAGEMENT TAB ---
 const RoleManagementTab = () => {
-  const [users, setUsers] = useState([
-    { id: '1', name: 'John Doe', email: 'john@example.com', role: 'user', joined: '2025-01-01', lastActive: '2025-11-15' },
-    { id: '2', name: 'Jane Smith', email: 'jane@example.com', role: 'admin', joined: '2025-02-01', lastActive: '2025-11-15' },
-    { id: '3', name: 'Super Admin', email: 'super@syncsummit.com', role: 'superadmin', joined: '2024-12-01', lastActive: '2025-11-16' },
-  ]);
+  const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [confirmModal, setConfirmModal] = useState(null); // { user, newRole }
   const [confirmInput, setConfirmInput] = useState('');
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const { data } = await axiosInstance.get('/admin/users');
+        setUsers(data);
+      } catch (err) {
+        toast.error('Failed to fetch users');
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const handleRoleChange = (e, user) => {
     const newRole = e.target.value;
@@ -138,9 +150,8 @@ const RoleManagementTab = () => {
   const executeRoleChange = async () => {
     if (!confirmModal || confirmInput !== confirmModal.user.email) return;
     try {
-      // Mock API call
-      // await axiosInstance.patch(`/superadmin/users/${confirmModal.user.id}/role`, { role: confirmModal.newRole });
-      setUsers(users.map(u => u.id === confirmModal.user.id ? { ...u, role: confirmModal.newRole } : u));
+      await axiosInstance.patch(`/admin/users/${confirmModal.user._id}/role`, { role: confirmModal.newRole });
+      setUsers(users.map(u => u._id === confirmModal.user._id ? { ...u, role: confirmModal.newRole } : u));
       toast.success(`Role updated for ${confirmModal.user.email}`);
       setConfirmModal(null);
     } catch (err) {
@@ -164,17 +175,17 @@ const RoleManagementTab = () => {
           </thead>
           <tbody>
             {users.map(u => (
-              <tr key={u.id} style={{ borderBottom: '1px solid var(--border-mid)' }}>
+              <tr key={u._id} style={{ borderBottom: '1px solid var(--border-mid)' }}>
                 <td style={{ padding: '16px' }}>
-                  <input type="checkbox" checked={selectedUsers.includes(u.id)} onChange={(e) => {
-                    if (e.target.checked) setSelectedUsers([...selectedUsers, u.id]);
-                    else setSelectedUsers(selectedUsers.filter(id => id !== u.id));
+                  <input type="checkbox" checked={selectedUsers.includes(u._id)} onChange={(e) => {
+                    if (e.target.checked) setSelectedUsers([...selectedUsers, u._id]);
+                    else setSelectedUsers(selectedUsers.filter(id => id !== u._id));
                   }} />
                 </td>
                 <td style={{ padding: '16px', fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-primary)' }}>{u.name}</td>
                 <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-secondary)' }}>{u.email}</td>
-                <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-secondary)' }}>{u.joined}</td>
-                <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-secondary)' }}>{u.lastActive}</td>
+                <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-secondary)' }}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-secondary)' }}>-</td>
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{
@@ -403,12 +414,7 @@ const PlatformSettingsTab = () => {
 
 // --- AUDIT LOG TAB ---
 const AuditLogTab = () => {
-  const [logs, setLogs] = useState([
-    { id: 1, timestamp: '2025-11-15T14:32:07Z', actor: 'super@syncsummit.com', action: 'ROLE_CHANGE', resource: 'user_123', ip: '192.168.1.1', details: { previous: 'user', new: 'admin' } },
-    { id: 2, timestamp: '2025-11-15T14:30:00Z', actor: 'admin@syncsummit.com', action: 'EVENT_CREATE', resource: 'event_456', ip: '192.168.1.5', details: { title: 'New Event' } },
-    { id: 3, timestamp: '2025-11-14T09:12:33Z', actor: 'admin@syncsummit.com', action: 'USER_SUSPEND', resource: 'user_999', ip: '10.0.0.4', details: { reason: 'Violation of TOS' } },
-    { id: 4, timestamp: '2025-11-14T08:00:00Z', actor: 'system', action: 'BROADCAST_SENT', resource: 'broadcast_12', ip: '127.0.0.1', details: { msg: 'Server maintenance soon' } },
-  ]);
+  const [logs, setLogs] = useState([]);
 
   const [expandedRow, setExpandedRow] = useState(null);
 
@@ -554,11 +560,88 @@ const DataExportTab = () => {
   );
 };
 
+// --- CONTENT MANAGEMENT TAB ---
+const ContentManagementTab = () => {
+  const [eventData, setEventData] = useState({ title: '', date: '', location: '', category: '', price: '', capacity: '', description: '', image: '' });
+  const [productData, setProductData] = useState({ title: '', category: '', price: '', stock: '', description: '', sizes: '', image: '' });
+
+  const handleEventSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axiosInstance.post('/event', {
+        ...eventData,
+        price: Number(eventData.price),
+        capacity: Number(eventData.capacity)
+      });
+      toast.success('Event created successfully');
+      setEventData({ title: '', date: '', location: '', category: '', price: '', capacity: '', description: '', image: '' });
+    } catch (err) {
+      toast.error('Failed to create event');
+    }
+  };
+
+  const handleProductSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axiosInstance.post('/products', {
+        name: productData.title,
+        category: productData.category,
+        price: Number(productData.price),
+        stock: Number(productData.stock),
+        sizes: productData.sizes.split(',').map(s => ({ label: s.trim(), available: true })),
+        description: [productData.description],
+        imageUrl: productData.image
+      });
+      toast.success('Product created successfully');
+      setProductData({ title: '', category: '', price: '', stock: '', description: '', sizes: '', image: '' });
+    } catch (err) {
+      toast.error('Failed to create product');
+    }
+  };
+
+  return (
+    <motion.div variants={pageVariants} initial="initial" animate="in" exit="out" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+      
+      {/* Create Event */}
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '24px' }}>
+        <h3 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '20px', color: 'var(--text-primary)', marginBottom: '24px' }}>Create Event</h3>
+        <form onSubmit={handleEventSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <input placeholder="Event Title" required value={eventData.title} onChange={e => setEventData({...eventData, title: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          <input type="date" required value={eventData.date} onChange={e => setEventData({...eventData, date: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          <input placeholder="Location" required value={eventData.location} onChange={e => setEventData({...eventData, location: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          <input placeholder="Category (e.g. Conference)" required value={eventData.category} onChange={e => setEventData({...eventData, category: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          <input placeholder="Price (INR)" type="number" required value={eventData.price} onChange={e => setEventData({...eventData, price: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          <input placeholder="Capacity" type="number" required value={eventData.capacity} onChange={e => setEventData({...eventData, capacity: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          <input placeholder="Image URL" value={eventData.image} onChange={e => setEventData({...eventData, image: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          <textarea placeholder="Description" required value={eventData.description} onChange={e => setEventData({...eventData, description: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)', height: '100px' }} />
+          <MetalButton type="submit" variant="primary">Create Event</MetalButton>
+        </form>
+      </div>
+
+      {/* Create Product */}
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '24px' }}>
+        <h3 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '20px', color: 'var(--text-primary)', marginBottom: '24px' }}>Create Product</h3>
+        <form onSubmit={handleProductSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <input placeholder="Product Title" required value={productData.title} onChange={e => setProductData({...productData, title: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          <input placeholder="Category (e.g. Apparel)" required value={productData.category} onChange={e => setProductData({...productData, category: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          <input placeholder="Price (INR)" type="number" required value={productData.price} onChange={e => setProductData({...productData, price: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          <input placeholder="Stock Quantity" type="number" required value={productData.stock} onChange={e => setProductData({...productData, stock: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          <input placeholder="Sizes (comma separated, e.g. S, M, L)" value={productData.sizes} onChange={e => setProductData({...productData, sizes: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          <input placeholder="Image URL" value={productData.image} onChange={e => setProductData({...productData, image: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          <textarea placeholder="Description" required value={productData.description} onChange={e => setProductData({...productData, description: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)', height: '100px' }} />
+          <MetalButton type="submit" variant="primary">Create Product</MetalButton>
+        </form>
+      </div>
+
+    </motion.div>
+  );
+};
+
 const SuperAdminPanel = () => {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('System');
   
-  const tabs = ['System', 'Role Management', 'Platform Settings', 'Audit Log', 'Data Export'];
+  const tabs = ['System', 'Role Management', 'Content Management', 'Platform Settings', 'Audit Log', 'Data Export'];
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingTop: '64px', color: 'var(--text-primary)' }}>
@@ -614,6 +697,7 @@ const SuperAdminPanel = () => {
         <AnimatePresence mode="wait">
           {activeTab === 'System' && <SystemTab key="system" />}
           {activeTab === 'Role Management' && <RoleManagementTab key="role" />}
+          {activeTab === 'Content Management' && <ContentManagementTab key="content" />}
           {activeTab === 'Platform Settings' && <PlatformSettingsTab key="platform" />}
           {activeTab === 'Audit Log' && <AuditLogTab key="audit" />}
           {activeTab === 'Data Export' && <DataExportTab key="export" />}

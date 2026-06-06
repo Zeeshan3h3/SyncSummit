@@ -6,18 +6,10 @@ import { io } from 'socket.io-client';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { MetalButton } from '../components/ui/Buttons';
+import axiosInstance from '../api/axios';
 
 // Mock Data
-const INITIAL_PRODUCTS = [
-  { id: 1, name: 'SyncSummit Oversized Hoodie', category: 'Apparel', price: 1499, stock: 50 },
-  { id: 2, name: 'Event T-Shirt 2025', category: 'Apparel', price: 599, original_price: 799, stock: 4 },
-  { id: 3, name: 'SyncSummit Cap', category: 'Accessories', price: 349, stock: 100 },
-  { id: 4, name: 'Cotton Tote Bag', category: 'Accessories', price: 249, stock: 200 },
-  { id: 5, name: 'Speaker Notes Sticker Pack', category: 'Accessories', price: 99, stock: 300 },
-  { id: 6, name: 'Gridded Notebook A5', category: 'Books & Stationery', price: 199, stock: 2 },
-  { id: 7, name: 'Complete Event Kit Bundle', category: 'Bundles', price: 1999, stock: 20, isNew: true },
-  { id: 8, name: 'Digital Pass — All Events', category: 'Digital', price: 499, stock: 9999 }
-];
+const INITIAL_PRODUCTS = [];
 
 const FILTERS = ['All', 'Apparel', 'Accessories', 'Books & Stationery', 'Digital', 'Bundles'];
 
@@ -76,12 +68,18 @@ const Products = () => {
       setCartItems(JSON.parse(savedCart));
     }
 
-    // Simulate API fetch
+    // Fetch from backend, fallback to empty array
     const fetchProducts = async () => {
       setIsLoading(true);
-      await new Promise(r => setTimeout(r, 1200));
-      setProducts(INITIAL_PRODUCTS);
-      setIsLoading(false);
+      try {
+        const res = await axiosInstance.get('/products');
+        setProducts(res.data);
+      } catch (err) {
+        console.error("Failed to fetch products, using empty state.", err);
+        setProducts(INITIAL_PRODUCTS);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchProducts();
 
@@ -119,23 +117,37 @@ const Products = () => {
 
   const handleAddToCart = (product) => {
     if (product.stock === 0) return;
+    
+    const savedCart = sessionStorage.getItem('syncSummitCart');
+    let items = savedCart ? JSON.parse(savedCart) : [];
+    
+    // Check if it exists with default size 'M' if applicable, or no size
+    const defaultSize = product.sizes && product.sizes.length > 0 ? product.sizes[0] : null;
+    const existingIdx = items.findIndex(i => i.product_id === product._id && i.size === defaultSize);
+    
+    if (existingIdx >= 0) {
+      items[existingIdx].quantity += 1;
+    } else {
+      items.push({ 
+        product_id: product._id, 
+        name: product.name, 
+        price: product.price, 
+        quantity: 1,
+        size: defaultSize 
+      });
+    }
 
-    setCartItems(prev => {
-      const existing = prev.find(item => item.product_id === product.id);
-      if (existing) {
-        return prev.map(item => item.product_id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
-      }
-      return [...prev, { product_id: product.id, name: product.name, price: product.price, quantity: 1 }];
-    });
+    sessionStorage.setItem('syncSummitCart', JSON.stringify(items));
+    setCartItems(items);
 
     toast.success('Added to cart', {
       icon: null,
       style: { background: 'var(--bg-elevated)', borderLeft: '4px solid var(--success)', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '14px', borderRadius: 'var(--radius-sm)' }
     });
 
-    setAddedItemIds(prev => ({ ...prev, [product.id]: true }));
+    setAddedItemIds(prev => ({ ...prev, [product._id]: true }));
     setTimeout(() => {
-      setAddedItemIds(prev => ({ ...prev, [product.id]: false }));
+      setAddedItemIds(prev => ({ ...prev, [product._id]: false }));
     }, 1500);
   };
 
@@ -173,16 +185,20 @@ const Products = () => {
           </div>
 
           {/* Desktop Cart Widget */}
-          <div className="desktop-cart-widget" style={{ display: 'none', background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '12px 16px', alignItems: 'center', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>{cartCount} items</span>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--orchid)' }}>₹{cartTotal.toLocaleString()}</span>
+          {cartCount > 0 && (
+            <div className="desktop-cart-widget" style={{ display: 'flex', background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '12px 16px', alignItems: 'center', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>{cartCount} items</span>
+                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--orchid)' }}>₹{cartTotal.toLocaleString()}</span>
+                </div>
               </div>
+              <Link to="/cart" style={{ textDecoration: 'none' }}>
+                <MetalButton variant="default" style={{ padding: '8px 16px', fontSize: '13px' }}>View Cart</MetalButton>
+              </Link>
             </div>
-            <MetalButton variant="default" style={{ padding: '8px 16px', fontSize: '13px' }}>View Cart</MetalButton>
-          </div>
+          )}
         </section>
 
         {/* FILTER + SORT BAR */}
@@ -300,15 +316,15 @@ const Products = () => {
                 const isSoldOut = product.stock === 0;
                 const isLowStock = product.stock > 0 && product.stock <= 5;
                 const discount = product.original_price ? Math.round(((product.original_price - product.price) / product.original_price) * 100) : null;
-                const isAdded = addedItemIds[product.id];
+                const isAdded = addedItemIds[product._id];
 
                 return (
-                  <div key={product.id} className="product-card" style={{
+                  <div key={product._id} className="product-card" style={{
                     background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: '24px', overflow: 'hidden',
                     display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
                   }}>
                     {/* Image Area */}
-                    <Link to={`/products/${product.id}`} style={{ display: 'block', textDecoration: 'none' }}>
+                    <Link to={`/products/${product._id}`} style={{ display: 'block', textDecoration: 'none' }}>
                       <div style={{ height: '220px', background: 'var(--bg-elevated)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         
                         <Silhouette category={product.category} />
@@ -344,7 +360,7 @@ const Products = () => {
                       <div style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         {product.category}
                       </div>
-                      <Link to={`/products/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <Link to={`/products/${product._id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                         <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', margin: '4px 0 0 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                           {product.name}
                         </h3>
