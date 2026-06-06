@@ -13,9 +13,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import EventDetail from './pages/EventDetail.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import SuperAdminPanel from './pages/SuperAdminPanel.jsx';
-
-// Placeholder components that will be replaced in Phase 2
-const UserDashboard = () => <div>User Dashboard</div>;
+import Unauthorized from './pages/Unauthorized.jsx';
 
 // Root component that handles routing and the startup /me check
 const App = () => {
@@ -58,6 +56,7 @@ const App = () => {
         <Route path="/products" element={<Products />} />
         <Route path="/products/:id" element={<ProductDetail />} />
         <Route path="/events/:id" element={<EventDetail />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
 
         {/* Protected routes (any logged in user) */}
         <Route 
