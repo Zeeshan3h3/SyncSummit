@@ -12,10 +12,10 @@ import ProductDetail from './pages/ProductDetail.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import EventDetail from './pages/EventDetail.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
+import SuperAdminPanel from './pages/SuperAdminPanel.jsx';
 
 // Placeholder components that will be replaced in Phase 2
 const UserDashboard = () => <div>User Dashboard</div>;
-const SuperAdminPanel = () => <div>Super Admin Panel</div>;
 
 // Root component that handles routing and the startup /me check
 const App = () => {

@@ -69,7 +69,7 @@ const Navbar = () => {
               </div>
               {user.role === 'user' && <Link to="/dashboard" style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-primary)', textDecoration: 'none' }}>Dashboard</Link>}
               {user.role === 'admin' && <Link to="/admin" style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--orchid)', textDecoration: 'none' }}>Admin Panel</Link>}
-              {user.role === 'superadmin' && <Link to="/superadmin" style={{ fontFamily: 'DM Sans', fontSize: '14px', background: 'var(--grad-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 600, textDecoration: 'none' }}>Control</Link>}
+              {user.role === 'superadmin' && <Link to="/superadmin" style={{ fontFamily: 'DM Sans', fontSize: '14px', background: 'linear-gradient(135deg, #F59E0B, #ED80E9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 600, textDecoration: 'none' }}>Control</Link>}
             </div>
           )}
         </div>
