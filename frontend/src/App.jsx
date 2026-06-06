@@ -14,6 +14,7 @@ import EventDetail from './pages/EventDetail.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import SuperAdminPanel from './pages/SuperAdminPanel.jsx';
 import Unauthorized from './pages/Unauthorized.jsx';
+import NotFound from './pages/NotFound.jsx';
 
 // Root component that handles routing and the startup /me check
 const App = () => {
@@ -87,6 +88,9 @@ const App = () => {
             </ProtectedRoute>
           } 
         />
+
+        {/* 404 Catch-all */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

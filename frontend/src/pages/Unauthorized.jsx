@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import useAuthStore from '../store/authStore';
+import Navbar from '../components/Navbar';
 import { MetalButton, LiquidButton } from '../components/ui/Buttons';
 
 const Unauthorized = () => {
@@ -12,15 +13,17 @@ const Unauthorized = () => {
   const requiredRoles = location.state?.requiredRoles || [];
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--bg)',
-      paddingTop: '64px',
-      color: 'var(--text-primary)'
-    }}>
+    <>
+      <Navbar />
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg)',
+        paddingTop: '64px',
+        color: 'var(--text-primary)'
+      }}>
       <div style={{
         maxWidth: '480px',
         width: '100%',
@@ -150,6 +153,7 @@ const Unauthorized = () => {
         </motion.div>
       </div>
     </div>
+    </>
   );
 };
 
