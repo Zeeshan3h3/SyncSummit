@@ -21,7 +21,12 @@ router.post('/register', async (req, res, next) => {
     const user = await User.create(req.body);
     const token = sendToken(user, res);
     res.status(201).json({ user: { id: user._id, name: user.name, role: user.role }, token });
-  } catch(err) { next(err); }
+  } catch(err) {
+    if (err.code === 11000) {
+      return res.status(400).json({ error: 'An account with this email already exists' });
+    }
+    next(err);
+  }
 });
 
 router.post('/login', async (req, res, next) => {
