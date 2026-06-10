@@ -15,5 +15,6 @@ const upload = multer({ storage: storage });
 
 export default upload.fields([
   { name: 'thumbnail', maxCount: 1 }, 
-  { name: 'images', maxCount: 10 }
+  { name: 'images', maxCount: 10 },
+  { name: 'image', maxCount: 1 }
 ]);
