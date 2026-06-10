@@ -79,16 +79,34 @@ const Home = () => {
   // Live Countdown Logic
   const [timeLeft, setTimeLeft] = useState({ days: 0, hrs: 0, min: 0, sec: 0 });
   const [events, setEvents] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [speakers, setSpeakers] = useState([]);
 
   useEffect(() => {
     // Fetch real events for the featured strip
-    axiosInstance.get('/event')
+    axiosInstance.get('/events')
       .then(res => {
         if (res.data && Array.isArray(res.data)) {
           setEvents(res.data.slice(0, 5)); // Take up to 5 events
         }
       })
       .catch(err => console.error("Error fetching events for home:", err));
+
+    axiosInstance.get('/products')
+      .then(res => {
+        if (res.data && Array.isArray(res.data)) {
+          setProducts(res.data.slice(0, 3));
+        }
+      })
+      .catch(err => console.error("Error fetching products for home:", err));
+
+    axiosInstance.get('/speakers')
+      .then(res => {
+        if (res.data && Array.isArray(res.data)) {
+          setSpeakers(res.data.slice(0, 4));
+        }
+      })
+      .catch(err => console.error("Error fetching speakers for home:", err));
 
 
     const targetDate = new Date('2025-11-15T00:00:00+05:30').getTime();
@@ -357,16 +375,20 @@ const Home = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-              {[
-                { name: 'SyncSummit Hoodie', type: 'APPAREL', price: '₹1499', featured: true, stock: 'in_stock' },
-                { name: 'Event T-Shirt', type: 'APPAREL', price: '₹599', featured: false, stock: 'in_stock' },
-                { name: 'Classic Cap', type: 'ACCESSORY', price: '₹349', featured: false, stock: 'low_stock' }
-              ].map((product, i) => (
+              {products.map((product, i) => {
+                const BACKEND = 'http://localhost:3000';
+                const thumbUrl = product.thumbnail ? (product.thumbnail.startsWith('http') ? product.thumbnail : `${BACKEND}${product.thumbnail}`) : null;
+                const isSoldOut = product.stock === 0;
+                return (
                 <div key={i} className="product-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
                   <div style={{ height: '200px', background: 'var(--bg-elevated)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                    <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: '80px', color: 'var(--text-primary)', opacity: 0.04, whiteSpace: 'nowrap', position: 'absolute' }}>
-                      {product.name}
-                    </span>
+                    {thumbUrl ? (
+                      <img src={thumbUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} onError={e => { e.target.style.display = 'none'; }} />
+                    ) : (
+                      <span style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: '80px', color: 'var(--text-primary)', opacity: 0.04, whiteSpace: 'nowrap', position: 'absolute' }}>
+                        {product.name}
+                      </span>
+                    )}
                     {product.featured && (
                       <div style={{ position: 'absolute', top: 0, right: 0, background: 'var(--violet)', padding: '3px 8px', borderRadius: '0 var(--radius-lg) 0 var(--radius-sm)', fontFamily: 'JetBrains Mono', fontSize: '9px', color: '#fff' }}>
                         FEATURED
@@ -376,21 +398,21 @@ const Home = () => {
                   <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
                       <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '16px', color: 'var(--text-primary)', margin: 0 }}>{product.name}</h3>
-                      <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)' }}>{product.type}</span>
+                      <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)' }}>{product.category || 'MERCH'}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontFamily: 'JetBrains Mono', fontSize: '20px', fontWeight: 500, color: 'var(--text-primary)' }}>{product.price}</span>
+                      <span style={{ fontFamily: 'JetBrains Mono', fontSize: '20px', fontWeight: 500, color: 'var(--text-primary)' }}>₹{product.price}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: product.stock === 'in_stock' ? 'var(--success)' : 'var(--warning)' }} />
-                        <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: product.stock === 'in_stock' ? 'var(--success)' : 'var(--warning)' }}>
-                          {product.stock === 'in_stock' ? 'In Stock' : 'Only 12 left'}
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isSoldOut ? 'var(--warning)' : 'var(--success)' }} />
+                        <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: isSoldOut ? 'var(--warning)' : 'var(--success)' }}>
+                          {isSoldOut ? 'Sold Out' : 'In Stock'}
                         </span>
                       </div>
                     </div>
-                    <MetalButton variant="primary" size="sm" style={{ width: '100%' }}>Buy Now</MetalButton>
+                    <Link to={`/products/${product._id}`} style={{ textDecoration: 'none' }}><MetalButton variant="primary" size="sm" style={{ width: '100%' }}>Buy Now</MetalButton></Link>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         </section>
@@ -404,21 +426,25 @@ const Home = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '48px' }}>
-              {[
-                { name: 'Anirban Roy', role: 'Co-founder', company: 'Zerodha Alumni', init: 'AR' },
-                { name: 'Priya Nair', role: 'VP Engineering', company: 'Flipkart', init: 'PN' },
-                { name: 'Soumyadip Bose', role: 'Partner', company: 'Blume Ventures', init: 'SB' },
-                { name: 'Kavitha Iyer', role: 'Product Lead', company: 'Razorpay', init: 'KI' }
-              ].map((speaker, i) => (
+              {speakers.map((speaker, i) => {
+                const BACKEND = 'http://localhost:3000';
+                const imgUrl = speaker.image ? (speaker.image.startsWith('http') ? speaker.image : `${BACKEND}${speaker.image}`) : null;
+                return (
                 <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '20px' }}>
-                  <div style={{ width: '48px', height: '48px', background: 'var(--grad-subtle)', border: '1px solid var(--border-mid)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'DM Sans', fontWeight: 600, fontSize: '16px', color: 'var(--lavender)' }}>
-                    {speaker.init}
-                  </div>
-                  <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', marginTop: '12px', marginBottom: '4px' }}>{speaker.name}</h3>
+                  {imgUrl ? (
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', marginBottom: '12px' }}>
+                       <img src={imgUrl} alt={speaker.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
+                    </div>
+                  ) : (
+                    <div style={{ width: '48px', height: '48px', background: 'var(--grad-subtle)', border: '1px solid var(--border-mid)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'DM Sans', fontWeight: 600, fontSize: '16px', color: 'var(--lavender)' }}>
+                      {speaker.name.charAt(0)}
+                    </div>
+                  )}
+                  <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', marginTop: imgUrl ? '0' : '12px', marginBottom: '4px' }}>{speaker.name}</h3>
                   <div style={{ fontFamily: 'DM Sans', fontSize: '13px', color: 'var(--text-muted)' }}>{speaker.role}</div>
                   <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--orchid)', marginTop: '4px' }}>{speaker.company}</div>
                 </div>
-              ))}
+              )})}
             </div>
 
             <div style={{ textAlign: 'center', fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-secondary)' }}>

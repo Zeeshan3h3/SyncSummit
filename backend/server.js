@@ -14,6 +14,7 @@ import eventRoutes from './routes/events.js';
 import productRoutes from './routes/products.js';
 import adminRoutes from './routes/admin.js';
 import contactRoutes from './routes/contact.js';
+import speakerRoutes from './routes/speakers.js';
 
 
 const app = express();
@@ -37,6 +38,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payment', paymentRoutes); 
 app.use('/api/contact', contactRoutes);
+app.use('/api/speakers', speakerRoutes);
 
 // Error handling middleware (must be after routes)
 app.use((err, req, res, next) => {

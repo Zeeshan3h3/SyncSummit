@@ -4,50 +4,8 @@ import Footer from '../components/Footer';
 import { motion } from 'framer-motion';
 import { Globe, User, ArrowRight } from 'lucide-react';
 
-const speakers = [
-  {
-    id: 1,
-    name: 'Dr. Aris Vlas',
-    role: 'Chief AI Scientist, NexusTech',
-    image: 'https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?q=80&w=400&auto=format&fit=crop',
-    bio: 'Pioneer in Generative AI and neural architecture search. Leading research in multi-modal learning systems.'
-  },
-  {
-    id: 2,
-    name: 'Sarah Chen',
-    role: 'Founder & CEO, BuildStack',
-    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=400&auto=format&fit=crop',
-    bio: 'Serial entrepreneur and investor. Built and sold two enterprise SaaS platforms before founding BuildStack.'
-  },
-  {
-    id: 3,
-    name: 'Michael Chang',
-    role: 'VP of Engineering, CloudScale',
-    image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=400&auto=format&fit=crop',
-    bio: 'Expert in distributed systems and cloud infrastructure. Formerly led core platform teams at major tech giants.'
-  },
-  {
-    id: 4,
-    name: 'Elena Rodriguez',
-    role: 'Head of Product Design, Artifact',
-    image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=400&auto=format&fit=crop',
-    bio: 'Award-winning designer focusing on spatial computing and next-generation human-computer interaction.'
-  },
-  {
-    id: 5,
-    name: 'James Wilson',
-    role: 'Director of Web3 Strategy, Polygon',
-    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=400&auto=format&fit=crop',
-    bio: 'Blockchain architecture specialist helping traditional finance institutions transition to decentralized systems.'
-  },
-  {
-    id: 6,
-    name: 'Amira Hassan',
-    role: 'Cybersecurity Lead, Sentinel',
-    image: 'https://images.unsplash.com/photo-1598550874175-4d0ef43ce418?q=80&w=400&auto=format&fit=crop',
-    bio: 'Defending enterprise networks against advanced persistent threats. Passionate about zero-trust architecture.'
-  }
-];
+import { useEffect, useState } from 'react';
+import axiosInstance from '../utils/axiosInstance';
 
 const SpeakerCard = ({ speaker, index }) => {
   return (
@@ -73,13 +31,20 @@ const SpeakerCard = ({ speaker, index }) => {
       }}
     >
       <div style={{ position: 'relative', height: '280px', overflow: 'hidden' }}>
-        <img 
-          src={speaker.image} 
-          alt={speaker.name}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
-          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
-          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-        />
+        {speaker.image ? (
+          <img 
+            src={speaker.image.startsWith('http') ? speaker.image : `http://localhost:3000${speaker.image}`} 
+            alt={speaker.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+            onError={e => { e.target.style.display = 'none'; }}
+          />
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: 'var(--grad-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '64px', fontWeight: 'bold', color: 'var(--lavender)' }}>
+            {speaker.name.charAt(0)}
+          </div>
+        )}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)' }} />
         <div style={{ position: 'absolute', bottom: '16px', right: '16px', display: 'flex', gap: '8px' }}>
           <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background='var(--orchid)'} onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.1)'}>
@@ -101,6 +66,22 @@ const SpeakerCard = ({ speaker, index }) => {
 };
 
 const Speakers = () => {
+  const [speakers, setSpeakers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    axiosInstance.get('/speakers')
+      .then(res => {
+        setSpeakers(res.data);
+      })
+      .catch(err => {
+        console.error('Failed to load speakers:', err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
       <Navbar />
@@ -125,11 +106,17 @@ const Speakers = () => {
           </motion.div>
 
           {/* Speakers Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '32px', marginBottom: '100px' }}>
-            {speakers.map((speaker, index) => (
-              <SpeakerCard key={speaker.id} speaker={speaker} index={index} />
-            ))}
-          </div>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '100px 0', color: 'var(--text-secondary)', fontFamily: 'JetBrains Mono' }}>Loading speakers...</div>
+          ) : speakers.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '100px 0', color: 'var(--text-secondary)', fontFamily: 'JetBrains Mono' }}>No speakers found.</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '32px', marginBottom: '100px' }}>
+              {speakers.map((speaker, index) => (
+                <SpeakerCard key={speaker._id} speaker={speaker} index={index} />
+              ))}
+            </div>
+          )}
 
           {/* CTA Section */}
           <motion.div 
