@@ -12,37 +12,7 @@ import useAuthStore from '../store/authStore.js';
 import Navbar from '../components/Navbar.jsx';
 import { MetalButton, LiquidButton } from '../components/ui/Buttons.jsx';
 
-// --- MOCKS ---
-const MOCK_EVENTS = [
-  { _id: 'e1', name: 'NexusHack 2025', type: 'HACKATHON', date: 'Nov 15, 2025', capacity: 200, registered: 148, status: 'OPEN' },
-  { _id: 'e2', name: 'Consult IQ', type: 'CASE STUDY', date: 'Dec 05, 2025', capacity: 50, registered: 48, status: 'OPEN' },
-  { _id: 'e3', name: 'Pitch Perfect', type: 'PITCH', date: 'Oct 12, 2025', capacity: 20, registered: 20, status: 'COMPLETED' },
-  { _id: 'e4', name: 'Web3 Workshop', type: 'WORKSHOP', date: 'Jan 10, 2026', capacity: 100, registered: 0, status: 'DRAFT' },
-];
-
-const MOCK_PRODUCTS = [
-  { _id: 'p1', name: 'SyncSummit Hoodie', category: 'Apparel', price: 1499, stock: 45, status: 'ACTIVE' },
-  { _id: 'p2', name: 'Developer Keyboard Mat', category: 'Accessories', price: 899, stock: 3, status: 'ACTIVE' },
-  { _id: 'p3', name: 'Limited Edition Mug', category: 'Accessories', price: 499, stock: 0, status: 'SOLD OUT' },
-];
-
-const MOCK_ORDERS = [
-  { _id: 'ORD-0042', customer: 'Arnab Roy', email: 'arnab@example.com', product: 'SyncSummit Hoodie', qty: 1, amount: 1499, status: 'PROCESSING', date: 'Oct 7, 2025' },
-  { _id: 'ORD-0041', customer: 'Priya S.', email: 'priya@example.com', product: 'Developer Keyboard Mat', qty: 2, amount: 1798, status: 'SHIPPED', date: 'Oct 6, 2025' },
-];
-
-const MOCK_USERS = [
-  { _id: 'u1', name: 'Arnab Roy', email: 'arnab@example.com', role: 'user', registered: 'Oct 1, 2025', status: 'ACTIVE' },
-  { _id: 'u2', name: 'System Admin', email: 'admin@syncsummit.com', role: 'superadmin', registered: 'Sep 15, 2025', status: 'ACTIVE' },
-  { _id: 'u3', name: 'John Doe', email: 'john@example.com', role: 'admin', registered: 'Sep 20, 2025', status: 'ACTIVE' },
-];
-
-const MOCK_ACTIVITY = [
-  { _id: 'a1', text: 'New registration: Arnab Roy for NexusHack 2025', type: 'success', time: '2 mins ago' },
-  { _id: 'a2', text: 'Order #ORD-0042 placed: ₹1,499', type: 'info', time: '15 mins ago' },
-  { _id: 'a3', text: 'Product \'Developer Keyboard Mat\' low stock: 3 left', type: 'warning', time: '1 hour ago' },
-  { _id: 'a4', text: 'New user registered: priya@example.com', type: 'info', time: '3 hours ago' },
-];
+// Removed MOCK data for DB integration
 
 // Reusable Status Badge for Admin Tables
 const AdminStatusBadge = ({ status }) => {
@@ -81,21 +51,44 @@ const AdminDashboard = () => {
 
   // Stats State
   const [stats, setStats] = useState({
-    totalRegistrations: 342,
-    regTrend: 12,
-    totalRevenue: 45800,
-    revTrend: 8,
-    activeEvents: 2,
-    totalEvents: 5,
-    pendingOrders: 14
+    totalRegistrations: 0,
+    regTrend: 0,
+    totalRevenue: 0,
+    revTrend: 0,
+    activeEvents: 0,
+    totalEvents: 0,
+    pendingOrders: 0
   });
 
   // Table States
-  const [events, setEvents] = useState(MOCK_EVENTS);
-  const [products, setProducts] = useState(MOCK_PRODUCTS);
-  const [orders, setOrders] = useState(MOCK_ORDERS);
-  const [users, setUsers] = useState(MOCK_USERS);
-  const [activities, setActivities] = useState(MOCK_ACTIVITY);
+  const [events, setEvents] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [activities, setActivities] = useState([]);
+
+  // Fetch logic
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      try {
+        setLoading(true);
+        const [statsRes, usersRes, ordersRes] = await Promise.all([
+           axiosInstance.get('/admin/stats').catch(() => ({ data: null })),
+           axiosInstance.get('/admin/users').catch(() => ({ data: null })),
+           axiosInstance.get('/admin/orders').catch(() => ({ data: null }))
+        ]);
+        
+        if (statsRes.data) setStats(prev => ({...prev, ...statsRes.data}));
+        if (usersRes.data) setUsers(usersRes.data);
+        if (ordersRes.data) setOrders(ordersRes.data);
+      } catch (error) {
+        console.error('Failed to fetch admin data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAdminData();
+  }, []);
 
   // Modals & UI States
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);

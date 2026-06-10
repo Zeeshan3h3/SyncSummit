@@ -6,7 +6,7 @@ import { io } from 'socket.io-client';
 import Navbar from '../components/Navbar';
 import useAuthStore from '../store/authStore';
 import { MetalButton, LiquidButton } from '../components/ui/Buttons';
-
+import axiosInstance from '../api/axios';
 // SVGs
 const GridIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>;
 const CalendarIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>;
@@ -22,17 +22,7 @@ const TABS = [
   { id: 'Support', label: 'Support', icon: MessageIcon },
 ];
 
-const MOCK_EVENTS = [
-  { id: 'EVT-101', name: 'Hackathon Sync 2025', date: 'Nov 15, 2025', venue: 'Main Hall A', status: 'CONFIRMED', regId: '#EVT-101-REG-042' },
-  { id: 'EVT-102', name: 'AI & Future Tech Panel', date: 'Nov 16, 2025', venue: 'Auditorium 2', status: 'WAITLISTED', regId: '#EVT-102-REG-011' }
-];
-
-const MOCK_ORDERS = [
-  { id: 'ORD-00042', item: 'SyncSummit Oversized Hoodie', qty: 1, price: 1499, status: 'PROCESSING', date: 'Oct 20, 2025' },
-  { id: 'ORD-00041', item: 'Event T-Shirt 2025', qty: 2, price: 1198, status: 'DELIVERED', date: 'Oct 15, 2025' },
-  { id: 'ORD-00039', item: 'Cotton Tote Bag', qty: 1, price: 249, status: 'SHIPPED', date: 'Oct 12, 2025' },
-  { id: 'ORD-00021', item: 'Gridded Notebook A5', qty: 1, price: 199, status: 'CANCELLED', date: 'Oct 01, 2025' },
-];
+// Removed MOCK data for DB integration
 
 const StatusBadge = ({ status }) => {
   let color = 'var(--text-muted)';
@@ -57,8 +47,25 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState('Overview');
-  const [orders, setOrders] = useState(MOCK_ORDERS);
-  const [events, setEvents] = useState(MOCK_EVENTS);
+  const [orders, setOrders] = useState([]);
+  const [events, setEvents] = useState([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchUserData = async () => {
+      try {
+         const [ordersRes, eventsRes] = await Promise.all([
+            axiosInstance.get('/orders/myorders').catch(() => ({ data: null })),
+            axiosInstance.get('/events/myevents').catch(() => ({ data: null }))
+         ]);
+         if (ordersRes.data) setOrders(ordersRes.data);
+         if (eventsRes.data) setEvents(eventsRes.data);
+      } catch (err) {
+         console.error('Failed to fetch user data', err);
+      }
+    };
+    fetchUserData();
+  }, [user]);
 
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [eventToCancel, setEventToCancel] = useState(null);
