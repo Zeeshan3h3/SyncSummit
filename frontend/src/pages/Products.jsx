@@ -289,7 +289,7 @@ const Products = () => {
         
         {/* PAGE HEADER */}
         <section style={{ padding: '64px 24px', position: 'relative', overflow: 'hidden', borderBottom: '1px solid var(--border-mid)' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(6,4,10,0.9) 0%, rgba(6,4,10,0.5) 100%), url("/products_banner.png") center/cover no-repeat', zIndex: 0 }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(6,4,10,0.9) 0%, rgba(6,4,10,0.5) 100%), url("/images/gemini/products_banner_1781109224901.png") center/cover no-repeat', zIndex: 0 }} />
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to top, var(--bg) 0%, transparent 100%)', zIndex: 0 }} />
           <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
           <div>

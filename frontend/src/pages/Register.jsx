@@ -176,7 +176,7 @@ const Register = () => {
   const steps = ['Account', 'Profile', 'Confirm'];
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', background: 'linear-gradient(to right, rgba(6,4,10,0.9) 0%, rgba(6,4,10,0.7) 100%), url("/auth_bg.png") center/cover no-repeat', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', background: 'linear-gradient(to right, rgba(6,4,10,0.9) 0%, rgba(6,4,10,0.7) 100%), url("/images/gemini/auth_bg_1781109258543.png") center/cover no-repeat', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
       {/* Fixed Logo */}
       <div style={{ position: 'fixed', top: '32px', left: '32px', zIndex: 50 }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>

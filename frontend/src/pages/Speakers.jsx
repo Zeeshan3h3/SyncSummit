@@ -101,7 +101,7 @@ const Speakers = () => {
         
         {/* Header Section */}
         <section style={{ paddingTop: '160px', paddingBottom: '80px', paddingLeft: 'clamp(20px, 5vw, 40px)', paddingRight: 'clamp(20px, 5vw, 40px)', position: 'relative', overflow: 'hidden', marginBottom: '80px' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(6,4,10,0.95) 0%, rgba(6,4,10,0.6) 100%), url("/speakers_banner.png") center/cover no-repeat', zIndex: 0 }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(6,4,10,0.95) 0%, rgba(6,4,10,0.6) 100%), url("/images/gemini/speakers_banner_1781109245487.png") center/cover no-repeat', zIndex: 0 }} />
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to top, var(--bg) 0%, transparent 100%)', zIndex: 0 }} />
           
           <motion.div 

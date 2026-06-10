@@ -83,7 +83,7 @@ const Login = () => {
       {/* LEFT COLUMN (Desktop only) */}
       <div className="desktop-only" style={{ 
         flex: 1, 
-        background: 'linear-gradient(to right, rgba(6,4,10,0.8) 0%, rgba(6,4,10,0.4) 100%), url("/auth_bg.png") center/cover no-repeat', 
+        background: 'linear-gradient(to right, rgba(6,4,10,0.8) 0%, rgba(6,4,10,0.4) 100%), url("/images/gemini/auth_bg_1781109258543.png") center/cover no-repeat', 
         borderRight: '1px solid var(--border)',
         position: 'relative',
         display: 'flex',

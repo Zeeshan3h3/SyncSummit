@@ -210,7 +210,7 @@ const Home = () => {
             <motion.div 
               initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1, duration: 0.5 }}
               className="desktop-only"
-              style={{ background: 'linear-gradient(to bottom, rgba(13, 10, 20, 0.4), var(--bg-card)), url("/hero_illustration.png") center/cover no-repeat', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative', overflow: 'hidden' }}
+              style={{ background: 'linear-gradient(to bottom, rgba(13, 10, 20, 0.4), var(--bg-card)), url("/images/gemini/hero_illustration_1781109055561.png") center/cover no-repeat', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative', overflow: 'hidden' }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>

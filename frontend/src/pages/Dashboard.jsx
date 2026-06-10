@@ -43,6 +43,235 @@ const StatusBadge = ({ status }) => {
   );
 };
 
+// Overview Tab Component
+const OverviewTab = React.memo(({ events, orders, safeUser, navigate, setActiveTab }) => (
+  <div className="tab-content" style={{ animation: 'fadeIn 0.3s' }}>
+    <header style={{ marginBottom: '32px' }}>
+      <h2 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '28px', color: 'var(--text-primary)', margin: '0 0 8px 0' }}>Overview</h2>
+      <div style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>
+        {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+      </div>
+    </header>
+
+    <div className="stats-grid" style={{ display: 'grid', gap: '20px', marginBottom: '48px' }}>
+      {[
+        { label: 'Events Registered', value: events.length },
+        { label: 'Orders Placed', value: orders.length },
+        { label: 'Days to Summit', value: Math.max(0, Math.floor((new Date('2025-11-15T00:00:00+05:30').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))), extra: 'Happening soon', dot: 'var(--warning)' },
+        { label: 'Badge Status', value: safeUser?.role === 'ATTENDEE' ? 'Confirmed' : safeUser?.role?.toUpperCase() || 'CONFIRMED' }
+      ].map((stat, i) => (
+        <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '20px', display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontFamily: 'JetBrains Mono', fontSize: '36px', color: 'var(--text-primary)', fontWeight: 500, lineHeight: 1 }}>{stat.value}</span>
+          <span style={{ fontFamily: 'DM Sans', fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>{stat.label}</span>
+          {stat.extra && (
+            <div style={{ marginTop: 'auto', paddingTop: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: stat.dot }} />
+              <span style={{ fontFamily: 'DM Sans', fontSize: '12px', color: stat.dot }}>{stat.extra}</span>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+
+    <section style={{ marginBottom: '48px' }}>
+      <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '18px', color: 'var(--text-primary)', marginBottom: '16px' }}>Your Registered Events</h3>
+      {events.length === 0 ? (
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <CalendarIcon />
+          <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-secondary)', margin: '12px 0 16px' }}>You haven't registered for any events</p>
+          <MetalButton variant="primary" size="sm" onClick={() => navigate('/')}>Browse Events</MetalButton>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {events.map(evt => (
+            <div key={evt.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ width: '3px', height: '36px', background: 'var(--violet)', borderRadius: '2px' }} />
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>{evt.name}</h4>
+                <div style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  {evt.date ? (isNaN(new Date(evt.date).getTime()) ? evt.date : new Date(evt.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) : 'TBA'} · {evt.venue}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <StatusBadge status={evt.status} />
+                <MetalButton variant="default" size="sm" onClick={() => navigate(`/events/${evt._id || evt.id}`)}>View Details</MetalButton>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+
+    <section>
+      <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '18px', color: 'var(--text-primary)', marginBottom: '16px' }}>Recent Orders</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+        {orders.slice(0, 3).map(ord => (
+          <div key={ord.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>{ord.id}</span>
+              <span style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>{ord.item}</span>
+              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)' }}>{ord.date}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '14px', color: 'var(--orchid)', fontWeight: 500 }}>₹{ord.price.toLocaleString()}</span>
+              <StatusBadge status={ord.status} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <LiquidButton onClick={() => setActiveTab('Orders')} style={{ padding: '8px 16px', fontSize: '13px' }}>View All Orders</LiquidButton>
+    </section>
+  </div>
+));
+
+// My Events Tab Component
+const EventsTab = React.memo(({ events, setEventToCancel, setIsCancelModalOpen }) => (
+  <div className="tab-content" style={{ animation: 'fadeIn 0.3s' }}>
+    <header style={{ marginBottom: '32px' }}>
+      <h2 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '28px', color: 'var(--text-primary)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        My Events
+        <span style={{ fontFamily: 'JetBrains Mono', fontSize: '14px', background: 'var(--bg-elevated)', color: 'var(--orchid)', padding: '2px 8px', borderRadius: 'var(--radius-full)', border: '1px solid var(--border-mid)' }}>{events.length}</span>
+      </h2>
+      <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>Events you are registered for at SyncSummit 2025</p>
+    </header>
+
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {events.map(evt => (
+        <div key={evt.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+          <div style={{ width: '64px', height: '64px', background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'JetBrains Mono', fontSize: '9px', color: 'var(--text-muted)', textAlign: 'center' }}>
+            QR Code
+          </div>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+              <StatusBadge status={evt.status} />
+              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>{evt.regId}</span>
+            </div>
+            <h3 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '20px', color: 'var(--text-primary)', margin: '0 0 8px 0' }}>{evt.name}</h3>
+            <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
+              {evt.date ? (isNaN(new Date(evt.date).getTime()) ? evt.date : new Date(evt.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) : 'TBA'} · {evt.venue}
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '160px' }}>
+            <MetalButton variant="default" disabled={true} style={{ width: '100%' }}>Download Pass</MetalButton>
+            <MetalButton variant="error" size="sm" style={{ width: '100%' }} onClick={() => { setEventToCancel(evt); setIsCancelModalOpen(true); }}>Cancel Registration</MetalButton>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+));
+
+// Orders Tab Component
+const OrdersTab = React.memo(({ orders }) => (
+  <div className="tab-content" style={{ animation: 'fadeIn 0.3s' }}>
+    <header style={{ marginBottom: '32px' }}>
+      <h2 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '28px', color: 'var(--text-primary)', margin: '0 0 8px 0' }}>My Orders</h2>
+      <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>Track and manage your merchandise orders</p>
+    </header>
+
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--border-mid)', background: 'var(--bg-elevated)' }}>
+            {['Order ID', 'Item', 'Qty', 'Price', 'Status', 'Date', 'Action'].map(h => (
+              <th key={h} style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map(ord => (
+            <tr key={ord.id} className="table-row" style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.1s' }}>
+              <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '14px', color: 'var(--text-primary)' }}>{ord.id}</td>
+              <td style={{ padding: '16px', fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-primary)' }}>{ord.item}</td>
+              <td style={{ padding: '16px', fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-primary)' }}>{ord.qty}</td>
+              <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '14px', color: 'var(--orchid)' }}>₹{ord.price}</td>
+              <td style={{ padding: '16px' }}><StatusBadge status={ord.status} /></td>
+              <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '14px', color: 'var(--text-muted)' }}>{ord.date}</td>
+              <td style={{ padding: '16px' }}>
+                <button style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'DM Sans', fontSize: '13px' }} onMouseOver={e => e.currentTarget.style.color = 'var(--violet)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-muted)'}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  View
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+));
+
+// Profile Settings Component
+const ProfileTab = React.memo(({ safeUser, profileForm, setProfileForm, handleSaveProfile, isUpdatingPassword, setIsUpdatingPassword }) => (
+  <div className="tab-content" style={{ animation: 'fadeIn 0.3s' }}>
+    <header style={{ marginBottom: '32px' }}>
+      <h2 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '28px', color: 'var(--text-primary)', margin: '0 0 8px 0' }}>Profile Settings</h2>
+      <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>Manage your personal information and security</p>
+    </header>
+
+    <div className="profile-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'start' }}>
+      {/* Left Form */}
+      <div>
+        <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '20px', color: 'var(--text-primary)', marginBottom: '24px' }}>Edit Profile</h3>
+        <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Full Name</label>
+            <input type="text" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '12px 16px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '15px', outline: 'none' }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Phone Number</label>
+            <input type="tel" value={profileForm.phone} placeholder="+91" onChange={e => setProfileForm({...profileForm, phone: e.target.value})} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '12px 16px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '15px', outline: 'none' }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Institution</label>
+            <input type="text" value={profileForm.institution} placeholder="E.g., NIT Durgapur" onChange={e => setProfileForm({...profileForm, institution: e.target.value})} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '12px 16px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '15px', outline: 'none' }} />
+          </div>
+          <MetalButton type="submit" style={{ marginTop: '8px', background: 'rgba(34,197,94,0.1)', color: 'var(--success)', border: '1px solid rgba(34,197,94,0.2)' }}>Save Changes</MetalButton>
+        </form>
+      </div>
+
+      {/* Right Info */}
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '24px' }}>
+        <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '20px', color: 'var(--text-primary)', marginBottom: '24px' }}>Account Info</h3>
+        
+        <table style={{ width: '100%', marginBottom: '24px' }}>
+          <tbody>
+            {Object.entries({
+              'Email': safeUser.email,
+              'Registered On': safeUser.createdAt ? new Date(safeUser.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Unknown',
+              'Role': safeUser.role,
+              'Account Status': 'Active'
+            }).map(([key, val]) => (
+              <tr key={key}>
+                <td style={{ padding: '8px 0', fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-muted)' }}>{key}</td>
+                <td style={{ padding: '8px 0', fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-primary)', textAlign: 'right' }}>{val}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <MetalButton variant="default" style={{ width: '100%' }}>Change Email</MetalButton>
+          <MetalButton variant="default" style={{ width: '100%' }} onClick={() => setIsUpdatingPassword(!isUpdatingPassword)}>Update Password</MetalButton>
+          
+          <AnimatePresence>
+            {isUpdatingPassword && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+                  <input type="password" placeholder="Current Password" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '14px', outline: 'none' }} />
+                  <input type="password" placeholder="New Password" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '14px', outline: 'none' }} />
+                  <input type="password" placeholder="Confirm Password" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '14px', outline: 'none' }} />
+                  <MetalButton style={{ background: 'rgba(34,197,94,0.1)', color: 'var(--success)', border: '1px solid rgba(34,197,94,0.2)' }} onClick={() => { setIsUpdatingPassword(false); toast.success('Password updated'); }}>Save Password</MetalButton>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  </div>
+));
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
@@ -136,234 +365,7 @@ export default function Dashboard() {
   const safeUser = user || { name: 'Guest', email: 'guest@syncsummit.com', role: 'ATTENDEE' };
   const initials = safeUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
-  // Overview Tab Component
-  const OverviewTab = () => (
-    <div className="tab-content" style={{ animation: 'fadeIn 0.3s' }}>
-      <header style={{ marginBottom: '32px' }}>
-        <h2 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '28px', color: 'var(--text-primary)', margin: '0 0 8px 0' }}>Overview</h2>
-        <div style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>
-          {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        </div>
-      </header>
 
-      <div className="stats-grid" style={{ display: 'grid', gap: '20px', marginBottom: '48px' }}>
-        {[
-          { label: 'Events Registered', value: events.length },
-          { label: 'Orders Placed', value: orders.length },
-          { label: 'Days to Summit', value: Math.max(0, Math.floor((new Date('2025-11-15T00:00:00+05:30').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))), extra: 'Happening soon', dot: 'var(--warning)' },
-          { label: 'Badge Status', value: safeUser?.role === 'ATTENDEE' ? 'Confirmed' : safeUser?.role?.toUpperCase() || 'CONFIRMED' }
-        ].map((stat, i) => (
-          <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '20px', display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '36px', color: 'var(--text-primary)', fontWeight: 500, lineHeight: 1 }}>{stat.value}</span>
-            <span style={{ fontFamily: 'DM Sans', fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>{stat.label}</span>
-            {stat.extra && (
-              <div style={{ marginTop: 'auto', paddingTop: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: stat.dot }} />
-                <span style={{ fontFamily: 'DM Sans', fontSize: '12px', color: stat.dot }}>{stat.extra}</span>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      <section style={{ marginBottom: '48px' }}>
-        <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '18px', color: 'var(--text-primary)', marginBottom: '16px' }}>Your Registered Events</h3>
-        {events.length === 0 ? (
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <CalendarIcon />
-            <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-secondary)', margin: '12px 0 16px' }}>You haven't registered for any events</p>
-            <MetalButton variant="primary" size="sm" onClick={() => navigate('/')}>Browse Events</MetalButton>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {events.map(evt => (
-              <div key={evt.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ width: '3px', height: '36px', background: 'var(--violet)', borderRadius: '2px' }} />
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>{evt.name}</h4>
-                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {evt.date ? (isNaN(new Date(evt.date).getTime()) ? evt.date : new Date(evt.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) : 'TBA'} · {evt.venue}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <StatusBadge status={evt.status} />
-                  <MetalButton variant="default" size="sm" onClick={() => navigate(`/events/${evt._id || evt.id}`)}>View Details</MetalButton>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section>
-        <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '18px', color: 'var(--text-primary)', marginBottom: '16px' }}>Recent Orders</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-          {orders.slice(0, 3).map(ord => (
-            <div key={ord.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>{ord.id}</span>
-                <span style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>{ord.item}</span>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)' }}>{ord.date}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '14px', color: 'var(--orchid)', fontWeight: 500 }}>₹{ord.price.toLocaleString()}</span>
-                <StatusBadge status={ord.status} />
-              </div>
-            </div>
-          ))}
-        </div>
-        <LiquidButton onClick={() => setActiveTab('Orders')} style={{ padding: '8px 16px', fontSize: '13px' }}>View All Orders</LiquidButton>
-      </section>
-    </div>
-  );
-
-  // My Events Tab Component
-  const EventsTab = () => (
-    <div className="tab-content" style={{ animation: 'fadeIn 0.3s' }}>
-      <header style={{ marginBottom: '32px' }}>
-        <h2 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '28px', color: 'var(--text-primary)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          My Events
-          <span style={{ fontFamily: 'JetBrains Mono', fontSize: '14px', background: 'var(--bg-elevated)', color: 'var(--orchid)', padding: '2px 8px', borderRadius: 'var(--radius-full)', border: '1px solid var(--border-mid)' }}>{events.length}</span>
-        </h2>
-        <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>Events you are registered for at SyncSummit 2025</p>
-      </header>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {events.map(evt => (
-          <div key={evt.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-            <div style={{ width: '64px', height: '64px', background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'JetBrains Mono', fontSize: '9px', color: 'var(--text-muted)', textAlign: 'center' }}>
-              QR Code
-            </div>
-            <div style={{ flex: 1, minWidth: '200px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <StatusBadge status={evt.status} />
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>{evt.regId}</span>
-              </div>
-              <h3 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '20px', color: 'var(--text-primary)', margin: '0 0 8px 0' }}>{evt.name}</h3>
-              <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
-                {evt.date ? (isNaN(new Date(evt.date).getTime()) ? evt.date : new Date(evt.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) : 'TBA'} · {evt.venue}
-              </p>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '160px' }}>
-              <MetalButton variant="default" disabled={true} style={{ width: '100%' }}>Download Pass</MetalButton>
-              <MetalButton variant="error" size="sm" style={{ width: '100%' }} onClick={() => { setEventToCancel(evt); setIsCancelModalOpen(true); }}>Cancel Registration</MetalButton>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  // Orders Tab Component
-  const OrdersTab = () => (
-    <div className="tab-content" style={{ animation: 'fadeIn 0.3s' }}>
-      <header style={{ marginBottom: '32px' }}>
-        <h2 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '28px', color: 'var(--text-primary)', margin: '0 0 8px 0' }}>My Orders</h2>
-        <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>Track and manage your merchandise orders</p>
-      </header>
-
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border-mid)', background: 'var(--bg-elevated)' }}>
-              {['Order ID', 'Item', 'Qty', 'Price', 'Status', 'Date', 'Action'].map(h => (
-                <th key={h} style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map(ord => (
-              <tr key={ord.id} className="table-row" style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.1s' }}>
-                <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '14px', color: 'var(--text-primary)' }}>{ord.id}</td>
-                <td style={{ padding: '16px', fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-primary)' }}>{ord.item}</td>
-                <td style={{ padding: '16px', fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-primary)' }}>{ord.qty}</td>
-                <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '14px', color: 'var(--orchid)' }}>₹{ord.price}</td>
-                <td style={{ padding: '16px' }}><StatusBadge status={ord.status} /></td>
-                <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '14px', color: 'var(--text-muted)' }}>{ord.date}</td>
-                <td style={{ padding: '16px' }}>
-                  <button style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'DM Sans', fontSize: '13px' }} onMouseOver={e => e.currentTarget.style.color = 'var(--violet)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-muted)'}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                    View
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
-  // Profile Settings Component
-  const ProfileTab = () => (
-    <div className="tab-content" style={{ animation: 'fadeIn 0.3s' }}>
-      <header style={{ marginBottom: '32px' }}>
-        <h2 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '28px', color: 'var(--text-primary)', margin: '0 0 8px 0' }}>Profile Settings</h2>
-        <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>Manage your personal information and security</p>
-      </header>
-
-      <div className="profile-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'start' }}>
-        {/* Left Form */}
-        <div>
-          <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '20px', color: 'var(--text-primary)', marginBottom: '24px' }}>Edit Profile</h3>
-          <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Full Name</label>
-              <input type="text" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '12px 16px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '15px', outline: 'none' }} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Phone Number</label>
-              <input type="tel" value={profileForm.phone} placeholder="+91" onChange={e => setProfileForm({...profileForm, phone: e.target.value})} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '12px 16px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '15px', outline: 'none' }} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Institution</label>
-              <input type="text" value={profileForm.institution} placeholder="E.g., NIT Durgapur" onChange={e => setProfileForm({...profileForm, institution: e.target.value})} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', padding: '12px 16px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '15px', outline: 'none' }} />
-            </div>
-            <MetalButton type="submit" style={{ marginTop: '8px', background: 'rgba(34,197,94,0.1)', color: 'var(--success)', border: '1px solid rgba(34,197,94,0.2)' }}>Save Changes</MetalButton>
-          </form>
-        </div>
-
-        {/* Right Info */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '24px' }}>
-          <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '20px', color: 'var(--text-primary)', marginBottom: '24px' }}>Account Info</h3>
-          
-          <table style={{ width: '100%', marginBottom: '24px' }}>
-            <tbody>
-              {Object.entries({
-                'Email': safeUser.email,
-                'Registered On': safeUser.createdAt ? new Date(safeUser.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Unknown',
-                'Role': safeUser.role,
-                'Account Status': 'Active'
-              }).map(([key, val]) => (
-                <tr key={key}>
-                  <td style={{ padding: '8px 0', fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-muted)' }}>{key}</td>
-                  <td style={{ padding: '8px 0', fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-primary)', textAlign: 'right' }}>{val}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <MetalButton variant="default" style={{ width: '100%' }}>Change Email</MetalButton>
-            <MetalButton variant="default" style={{ width: '100%' }} onClick={() => setIsUpdatingPassword(!isUpdatingPassword)}>Update Password</MetalButton>
-            
-            <AnimatePresence>
-              {isUpdatingPassword && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
-                    <input type="password" placeholder="Current Password" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '14px', outline: 'none' }} />
-                    <input type="password" placeholder="New Password" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '14px', outline: 'none' }} />
-                    <input type="password" placeholder="Confirm Password" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '14px', outline: 'none' }} />
-                    <MetalButton style={{ background: 'rgba(34,197,94,0.1)', color: 'var(--success)', border: '1px solid rgba(34,197,94,0.2)' }} onClick={() => { setIsUpdatingPassword(false); toast.success('Password updated'); }}>Save Password</MetalButton>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
@@ -428,10 +430,10 @@ export default function Dashboard() {
 
         {/* MAIN CONTENT AREA */}
         <main className="dashboard-content" style={{ flex: 1, overflowY: 'auto', padding: '32px clamp(20px, 3vw, 48px)' }}>
-          {activeTab === 'Overview' && <OverviewTab />}
-          {activeTab === 'Events' && <EventsTab />}
-          {activeTab === 'Orders' && <OrdersTab />}
-          {activeTab === 'Profile' && <ProfileTab />}
+          {activeTab === 'Overview' && <OverviewTab events={events} orders={orders} safeUser={safeUser} navigate={navigate} setActiveTab={setActiveTab} />}
+          {activeTab === 'Events' && <EventsTab events={events} setEventToCancel={setEventToCancel} setIsCancelModalOpen={setIsCancelModalOpen} />}
+          {activeTab === 'Orders' && <OrdersTab orders={orders} />}
+          {activeTab === 'Profile' && <ProfileTab safeUser={safeUser} profileForm={profileForm} setProfileForm={setProfileForm} handleSaveProfile={handleSaveProfile} isUpdatingPassword={isUpdatingPassword} setIsUpdatingPassword={setIsUpdatingPassword} />}
           {activeTab === 'Support' && (
             <div className="tab-content" style={{ animation: 'fadeIn 0.3s' }}>
               <h2 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '28px', color: 'var(--text-primary)', margin: '0 0 16px 0' }}>Support</h2>

@@ -147,7 +147,7 @@ const ContactUs = () => {
 
               {/* Decorative Image */}
               <div style={{ width: '100%', height: '240px', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-mid)', marginBottom: '16px' }}>
-                <img src="/contact_illustration.png" alt="Contact Illustration" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src="/images/gemini/contact_illustration_1781109235273.png" alt="Contact Illustration" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               
               {/* Decorative Element */}

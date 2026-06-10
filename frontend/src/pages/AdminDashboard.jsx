@@ -237,7 +237,7 @@ const AdminDashboard = () => {
   const renderDashboard = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       {/* Banner */}
-      <div style={{ width: '100%', minHeight: '160px', borderRadius: 'var(--radius-lg)', backgroundImage: 'url("/admin_banner.png")', backgroundSize: 'cover', backgroundPosition: 'center', border: '1px solid var(--border-mid)', position: 'relative', overflow: 'hidden', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '24px', padding: '24px' }}>
+      <div style={{ width: '100%', minHeight: '160px', borderRadius: 'var(--radius-lg)', backgroundImage: 'url("/images/gemini/admin_banner_1781109072603.png")', backgroundSize: 'cover', backgroundPosition: 'center', border: '1px solid var(--border-mid)', position: 'relative', overflow: 'hidden', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '24px', padding: '24px' }}>
          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(6, 4, 10, 0.9), rgba(6, 4, 10, 0.2))' }} />
          <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <h2 style={{ fontFamily: '"Syne", sans-serif', fontWeight: 700, fontSize: '28px', margin: 0, color: '#fff' }}>Welcome back, {user?.name || 'Admin'}</h2>
