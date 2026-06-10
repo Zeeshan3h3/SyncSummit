@@ -8,6 +8,7 @@ import axiosInstance from '../api/axios';
 import { io } from 'socket.io-client';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
+import { getDeterministicImage } from '../utils/imageUtils';
 
 // SVGs
 const SearchIcon = () => (
@@ -238,8 +239,8 @@ const EventCard = ({ event, index, userRole, onEdit, onDelete }) => {
     statusColor = 'var(--error)';
   }
 
-  const BACKEND = 'http://localhost:3000';
-  const thumbUrl = event.thumbnail ? (event.thumbnail.startsWith('http') ? event.thumbnail : `${BACKEND}${event.thumbnail}`) : null;
+  const BACKEND = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:3000';
+  const thumbUrl = event.thumbnail ? (event.thumbnail.startsWith('http') ? event.thumbnail : `${BACKEND}${event.thumbnail}`) : getDeterministicImage(event.name, 800, 600);
 
   return (
     <motion.div
@@ -452,20 +453,27 @@ const Events = () => {
 
   // Fetch logic
   useEffect(() => {
+    const controller = new AbortController();
     const fetchEvents = async () => {
       setIsLoading(true);
       setError(false);
       try {
-        const res = await axiosInstance.get('/events');
+        const res = await axiosInstance.get('/events', { signal: controller.signal });
         setEvents(res.data);
       } catch (err) {
-        console.error("Failed to fetch events:", err);
-        setError(true);
+        if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+          console.error("Failed to fetch events:", err);
+          setError(true);
+        }
       } finally {
         setIsLoading(false);
       }
     };
     fetchEvents();
+
+    return () => {
+      controller.abort();
+    };
   }, [retryCount]);
 
   // Socket
@@ -620,8 +628,10 @@ const Events = () => {
       <main style={{ background: 'var(--bg)', minHeight: '100vh', paddingTop: '64px', color: 'var(--text-primary)' }}>
         
         {/* HEADER */}
-        <section style={{ padding: '56px clamp(20px, 5vw, 80px) 40px' }}>
-          <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px', alignItems: 'flex-start' }}>
+        <section style={{ padding: '80px clamp(20px, 5vw, 80px)', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(6,4,10,0.95) 0%, rgba(6,4,10,0.6) 100%), url("/events_banner.png") center/cover no-repeat', zIndex: 0 }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to top, var(--bg) 0%, transparent 100%)', zIndex: 0 }} />
+          <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
             <div>
               <motion.div
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
@@ -870,13 +880,21 @@ const Events = () => {
                   onMouseEnter={(e) => e.currentTarget.style.borderColor = 'rgba(237,128,233,0.35)'}
                   onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-mid)'}
                 >
-                  {featuredEvent.thumbnail && (
+                  {featuredEvent.thumbnail ? (
                     <div style={{ margin: '-36px -40px 0', height: '250px', borderBottom: '1px solid var(--border-mid)' }}>
                       <img 
-                        src={featuredEvent.thumbnail.startsWith('http') ? featuredEvent.thumbnail : `http://localhost:3000${featuredEvent.thumbnail}`} 
+                        src={featuredEvent.thumbnail.startsWith('http') ? featuredEvent.thumbnail : `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:3000'}${featuredEvent.thumbnail}`} 
                         alt={featuredEvent.name} 
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                         onError={e => { e.target.style.display = 'none'; }}
+                      />
+                    </div>
+                  ) : (
+                    <div style={{ margin: '-36px -40px 0', height: '250px', borderBottom: '1px solid var(--border-mid)' }}>
+                      <img 
+                        src={getDeterministicImage(featuredEvent.name, 1200, 400)} 
+                        alt={featuredEvent.name} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                       />
                     </div>
                   )}

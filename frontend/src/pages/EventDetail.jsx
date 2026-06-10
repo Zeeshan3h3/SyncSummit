@@ -11,6 +11,7 @@ import axiosInstance from '../api/axios.js';
 import useAuthStore from '../store/authStore.js';
 import Navbar from '../components/Navbar.jsx';
 import { MetalButton, LiquidButton } from '../components/ui/Buttons.jsx';
+import { getDeterministicImage } from '../utils/imageUtils';
 
 
 
@@ -38,22 +39,28 @@ const EventDetail = () => {
 
   // Fetch Event Data
   useEffect(() => {
+    const controller = new AbortController();
     const fetchEvent = async () => {
       try {
         setLoading(true);
         // Real API fetch
-        const response = await axiosInstance.get(`/events/${id}`);
+        const response = await axiosInstance.get(`/events/${id}`, { signal: controller.signal });
         setEvent(response.data.event || response.data);
       } catch (err) {
-        console.warn('API fetch failed:', err);
-        // Ensure no fallback is used per requirements
-        toast.error('Failed to load event details');
+        if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+          console.warn('API fetch failed:', err);
+          toast.error('Failed to load event details');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchEvent();
+
+    return () => {
+      controller.abort();
+    };
   }, [id]);
 
   // Check registration status
@@ -160,13 +167,8 @@ const EventDetail = () => {
         toast.error('Event is now full');
         setIsModalOpen(false);
       } else {
-        console.warn('Registration API failed, mocking success...');
-        setTimeout(() => {
-          setRegistrationSuccess(true);
-          setIsRegistered(true);
-          setEvent(prev => ({ ...prev, registered: prev.registered + 1 }));
-          toast.success('Registration Confirmed (Mock)!');
-        }, 1500);
+        toast.error('Failed to register for the event');
+        console.error('Registration API failed:', err);
       }
     } finally {
       setRegistering(false);
@@ -228,12 +230,12 @@ const EventDetail = () => {
     }
   }
 
-  const getImageUrl = (path) => {
-    if (!path) return null;
+  const BACKEND = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:3000';
+  const getImageUrl = (path, isGallery = false) => {
+    if (!path) return getDeterministicImage(event.name + (isGallery ? Math.random().toString() : ''), 1200, 600);
     // Handle cases where the path might already be an absolute URL
     if (path.startsWith('http')) return path;
-    // Assuming backend runs on port 3000
-    return `http://localhost:3000${path}`;
+    return `${BACKEND}${path}`;
   };
 
   return (
@@ -511,7 +513,7 @@ const EventDetail = () => {
                       border: '1px solid var(--border-mid)'
                     }}>
                       <img 
-                        src={getImageUrl(img)} 
+                        src={getImageUrl(img, true)} 
                         alt={`${event.name} gallery image ${idx + 1}`}
                         style={{
                           width: '100%',

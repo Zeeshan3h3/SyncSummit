@@ -83,7 +83,7 @@ const Login = () => {
       {/* LEFT COLUMN (Desktop only) */}
       <div className="desktop-only" style={{ 
         flex: 1, 
-        background: 'var(--bg-elevated)', 
+        background: 'linear-gradient(to right, rgba(6,4,10,0.8) 0%, rgba(6,4,10,0.4) 100%), url("/auth_bg.png") center/cover no-repeat', 
         borderRight: '1px solid var(--border)',
         position: 'relative',
         display: 'flex',
@@ -353,15 +353,7 @@ const Login = () => {
         </motion.div>
       </div>
 
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        .desktop-only { display: none !important; }
-        @media (min-width: 768px) {
-          .desktop-only { display: flex !important; }
-          .mobile-only { display: none !important; }
-        }
-        /* Custom underline behavior handled in inline styles */
-      `}} />
+
     </div>
   );
 };

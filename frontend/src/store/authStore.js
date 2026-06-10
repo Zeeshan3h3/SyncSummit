@@ -1,40 +1,42 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import axiosInstance from '../api/axios.js';
 
-// Create a Zustand store with persist middleware
 const useAuthStore = create(
   persist(
     (set) => ({
-      // user: holds { id, name, email, role } or null
-      // Exists to provide UI with user details and role for routing
       user: null,
-      
-      // token: holds the JWT string or null
-      // Exists to pass to Axios request interceptor for header auth
-      token: null,
-      
-      // isLoading: true while /me check is running on app load
-      // Exists to prevent ProtectedRoute from kicking logged-in users on refresh
+      isAuthenticated: false,
       isLoading: true,
 
-      // setAuth: Sets both user and token in one call
-      // Called after successful login or register
-      setAuth: (user, token) => set({ user, token }),
-      
-      // logout: Sets user to null and token to null
-      // Clears React state (Cookie clearing is done via POST /api/auth/logout)
-      logout: () => set({ user: null, token: null }),
-      
-      // setLoading: Sets isLoading true or false
-      // Used during the /me check on app startup
+      checkAuth: async () => {
+        set({ isLoading: true });
+        try {
+          const response = await axiosInstance.get('/auth/me');
+          set({ user: response.data.user || response.data, isAuthenticated: true });
+        } catch (error) {
+          set({ user: null, isAuthenticated: false });
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      logout: async () => {
+        try {
+          await axiosInstance.delete('/auth/logout');
+        } catch (error) {
+          console.error('[AuthStore] logout failed', error);
+        } finally {
+          set({ user: null, isAuthenticated: false });
+        }
+      },
+
+      setAuth: (user) => set({ user, isAuthenticated: true }),
       setLoading: (isLoading) => set({ isLoading }),
     }),
     {
-      // name: 'syncsummit-auth' sets the key for localStorage
       name: 'syncsummit-auth',
-      // Only persist 'user' and 'token' fields
-      // Do NOT persist isLoading — it should always start fresh
-      partialize: (state) => ({ user: state.user, token: state.token }),
+      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
     }
   )
 );

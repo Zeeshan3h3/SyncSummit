@@ -8,8 +8,9 @@ import Footer from '../components/Footer';
 import { MetalButton } from '../components/ui/Buttons';
 import axiosInstance from '../api/axios';
 import useAuthStore from '../store/authStore';
+import { getDeterministicImage } from '../utils/imageUtils';
 
-const BACKEND = 'http://localhost:3000';
+const BACKEND = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:3000';
 
 // ── Product Edit Modal ──────────────────────────────────────────────────────
 const ProductEditModal = ({ product, onClose, onSaved, userRole }) => {
@@ -163,14 +164,17 @@ const Products = () => {
     }
 
     // Fetch from backend, fallback to empty array
+    const controller = new AbortController();
     const fetchProducts = async () => {
       setIsLoading(true);
       try {
-        const res = await axiosInstance.get('/products');
+        const res = await axiosInstance.get('/products', { signal: controller.signal });
         setProducts(res.data);
       } catch (err) {
-        console.error("Failed to fetch products, using empty state.", err);
-        setProducts(INITIAL_PRODUCTS);
+        if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+          console.error("Failed to fetch products, using empty state.", err);
+          setProducts(INITIAL_PRODUCTS);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -190,7 +194,10 @@ const Products = () => {
       }));
     });
 
-    return () => socket.disconnect();
+    return () => {
+      socket.disconnect();
+      controller.abort();
+    };
   }, []);
 
   // Save Cart to sessionStorage
@@ -281,7 +288,10 @@ const Products = () => {
       <main style={{ flex: 1, paddingTop: '64px' }}>
         
         {/* PAGE HEADER */}
-        <section style={{ padding: '48px 24px 32px', maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <section style={{ padding: '64px 24px', position: 'relative', overflow: 'hidden', borderBottom: '1px solid var(--border-mid)' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(6,4,10,0.9) 0%, rgba(6,4,10,0.5) 100%), url("/products_banner.png") center/cover no-repeat', zIndex: 0 }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to top, var(--bg) 0%, transparent 100%)', zIndex: 0 }} />
+          <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
           <div>
             <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--orchid)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
               Official Store · SyncSummit 2025
@@ -309,6 +319,7 @@ const Products = () => {
               </Link>
             </div>
           )}
+          </div>
         </section>
 
         {/* FILTER + SORT BAR */}
@@ -439,7 +450,7 @@ const Products = () => {
                         {product.thumbnail ? (
                           <img src={product.thumbnail.startsWith('http') ? product.thumbnail : `${BACKEND}${product.thumbnail}`} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} onError={e => { e.target.style.display = 'none'; }} />
                         ) : (
-                          <Silhouette category={product.category} />
+                          <img src={getDeterministicImage(product.name, 800, 800)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
                         )}
 
                         {/* Admin Overlay Buttons */}

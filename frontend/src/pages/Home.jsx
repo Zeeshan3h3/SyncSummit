@@ -5,6 +5,8 @@ import { MetalButton, LiquidButton, Button } from '../components/ui/Buttons';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import axiosInstance from '../api/axios';
+import { Loader2 } from 'lucide-react';
+import { getDeterministicImage } from '../utils/imageUtils';
 
 // Helper component for staggered animations
 const FadeIn = ({ children, delay = 0, duration = 0.4, y = 8, className = '', style = {} }) => (
@@ -81,32 +83,33 @@ const Home = () => {
   const [events, setEvents] = useState([]);
   const [products, setProducts] = useState([]);
   const [speakers, setSpeakers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch real events for the featured strip
-    axiosInstance.get('/events')
-      .then(res => {
-        if (res.data && Array.isArray(res.data)) {
-          setEvents(res.data.slice(0, 5)); // Take up to 5 events
-        }
-      })
-      .catch(err => console.error("Error fetching events for home:", err));
+    const controller = new AbortController();
 
-    axiosInstance.get('/products')
-      .then(res => {
-        if (res.data && Array.isArray(res.data)) {
-          setProducts(res.data.slice(0, 3));
-        }
-      })
-      .catch(err => console.error("Error fetching products for home:", err));
+    const fetchHomeData = async () => {
+      try {
+        setIsLoading(true);
+        const [eventsRes, productsRes, speakersRes] = await Promise.all([
+          axiosInstance.get('/events', { signal: controller.signal }),
+          axiosInstance.get('/products', { signal: controller.signal }),
+          axiosInstance.get('/speakers', { signal: controller.signal })
+        ]);
 
-    axiosInstance.get('/speakers')
-      .then(res => {
-        if (res.data && Array.isArray(res.data)) {
-          setSpeakers(res.data.slice(0, 4));
+        if (eventsRes.data && Array.isArray(eventsRes.data)) setEvents(eventsRes.data.slice(0, 5));
+        if (productsRes.data && Array.isArray(productsRes.data)) setProducts(productsRes.data.slice(0, 3));
+        if (speakersRes.data && Array.isArray(speakersRes.data)) setSpeakers(speakersRes.data.slice(0, 4));
+      } catch (err) {
+        if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+          console.error("Error fetching home data:", err);
         }
-      })
-      .catch(err => console.error("Error fetching speakers for home:", err));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchHomeData();
 
 
     const targetDate = new Date('2025-11-15T00:00:00+05:30').getTime();
@@ -127,7 +130,10 @@ const Home = () => {
 
     updateTimer();
     const timerId = setInterval(updateTimer, 1000);
-    return () => clearInterval(timerId);
+    return () => {
+      clearInterval(timerId);
+      controller.abort();
+    };
   }, []);
 
   return (
@@ -204,7 +210,7 @@ const Home = () => {
             <motion.div 
               initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1, duration: 0.5 }}
               className="desktop-only"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}
+              style={{ background: 'linear-gradient(to bottom, rgba(13, 10, 20, 0.4), var(--bg-card)), url("/hero_illustration.png") center/cover no-repeat', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative', overflow: 'hidden' }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
@@ -257,7 +263,11 @@ const Home = () => {
 
           <div style={{ position: 'relative' }}>
             <div className="hide-scrollbar" style={{ display: 'flex', gap: '24px', overflowX: 'auto', padding: '0 clamp(20px, 5vw, 80px)' }}>
-              {events.length > 0 ? events.map((event, i) => {
+              {isLoading ? (
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+                  <Loader2 style={{ width: '32px', height: '32px', color: 'var(--orchid)', animation: 'spin 1s linear infinite' }} />
+                </div>
+              ) : events.length > 0 ? events.map((event, i) => {
                 // Parse dates and format safely
                 let dateStr = 'TBA';
                 if (event.schedule && event.schedule.length > 0) {
@@ -280,8 +290,8 @@ const Home = () => {
                    dateStr = new Date(event.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                 }
                 
-                const BACKEND = 'http://localhost:3000';
-                const thumbUrl = event.thumbnail ? (event.thumbnail.startsWith('http') ? event.thumbnail : `${BACKEND}${event.thumbnail}`) : null;
+                const BACKEND = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:3000';
+                const thumbUrl = event.thumbnail ? (event.thumbnail.startsWith('http') ? event.thumbnail : `${BACKEND}${event.thumbnail}`) : getDeterministicImage(event.name || event.title, 600, 400);
                 
                 return (
                 <div key={event._id || i} className="event-card" style={{
@@ -375,9 +385,13 @@ const Home = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-              {products.map((product, i) => {
-                const BACKEND = 'http://localhost:3000';
-                const thumbUrl = product.thumbnail ? (product.thumbnail.startsWith('http') ? product.thumbnail : `${BACKEND}${product.thumbnail}`) : null;
+              {isLoading ? (
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '40px 0', gridColumn: '1 / -1' }}>
+                  <Loader2 style={{ width: '32px', height: '32px', color: 'var(--orchid)', animation: 'spin 1s linear infinite' }} />
+                </div>
+              ) : products.map((product, i) => {
+                const BACKEND = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:3000';
+                const thumbUrl = product.thumbnail ? (product.thumbnail.startsWith('http') ? product.thumbnail : `${BACKEND}${product.thumbnail}`) : getDeterministicImage(product.name, 600, 600);
                 const isSoldOut = product.stock === 0;
                 return (
                 <div key={i} className="product-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
@@ -426,9 +440,13 @@ const Home = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '48px' }}>
-              {speakers.map((speaker, i) => {
-                const BACKEND = 'http://localhost:3000';
-                const imgUrl = speaker.image ? (speaker.image.startsWith('http') ? speaker.image : `${BACKEND}${speaker.image}`) : null;
+              {isLoading ? (
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '40px 0', gridColumn: '1 / -1' }}>
+                  <Loader2 style={{ width: '32px', height: '32px', color: 'var(--orchid)', animation: 'spin 1s linear infinite' }} />
+                </div>
+              ) : speakers.map((speaker, i) => {
+                const BACKEND = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:3000';
+                const imgUrl = speaker.image ? (speaker.image.startsWith('http') ? speaker.image : `${BACKEND}${speaker.image}`) : getDeterministicImage(speaker.name, 200, 200);
                 return (
                 <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '20px' }}>
                   {imgUrl ? (
@@ -490,16 +508,6 @@ const Home = () => {
       </main>
 
       <Footer />
-      <style>{`
-        .desktop-only { display: none !important; }
-        .hero-grid { grid-template-columns: 1fr !important; }
-        .event-card:hover { border-color: rgba(237, 128, 233, 0.4) !important; transform: translateY(-4px); }
-        .product-card:hover { border-color: rgba(237, 128, 233, 0.4) !important; transform: translateY(-4px); transition: all 0.25s ease; cursor: pointer; }
-        @media (min-width: 1024px) {
-          .desktop-only { display: flex !important; }
-          .hero-grid { grid-template-columns: 55% 45% !important; }
-        }
-      `}</style>
     </div>
   );
 };

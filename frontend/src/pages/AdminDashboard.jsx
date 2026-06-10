@@ -149,6 +149,9 @@ const AdminDashboard = () => {
     setIsSaving(true);
     try {
       const formData = new FormData(e.target);
+      if (user?.role !== 'superadmin') {
+        formData.delete('price');
+      }
       const { data } = await axiosInstance.put(`/events/${editingEvent._id}`, formData);
       setEvents(prev => prev.map(ev => ev._id === editingEvent._id ? data : ev));
       toast.success('Event updated');
@@ -165,6 +168,9 @@ const AdminDashboard = () => {
     setIsSaving(true);
     try {
       const formData = new FormData(e.target);
+      if (user?.role !== 'superadmin') {
+        formData.delete('price');
+      }
       const { data } = await axiosInstance.put(`/products/${editingProduct._id}`, formData);
       setProducts(prev => prev.map(p => p._id === editingProduct._id ? data : p));
       toast.success('Product updated');
@@ -230,18 +236,20 @@ const AdminDashboard = () => {
 
   const renderDashboard = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
-        <h2 style={{ fontFamily: '"Syne", sans-serif', fontWeight: 700, fontSize: '28px', margin: 0 }}>Admin Dashboard</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '12px', color: 'var(--text-muted)' }}>
-            Last updated just now
-          </span>
-          <LiquidButton onClick={handleRefresh} style={{ height: '36px', padding: '0 16px' }}>
-            <RefreshCw size={14} className={loading ? "spin" : ""} style={{ marginRight: '8px' }} />
-            Refresh
-          </LiquidButton>
-        </div>
+      {/* Banner */}
+      <div style={{ width: '100%', minHeight: '160px', borderRadius: 'var(--radius-lg)', backgroundImage: 'url("/admin_banner.png")', backgroundSize: 'cover', backgroundPosition: 'center', border: '1px solid var(--border-mid)', position: 'relative', overflow: 'hidden', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '24px', padding: '24px' }}>
+         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(6, 4, 10, 0.9), rgba(6, 4, 10, 0.2))' }} />
+         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <h2 style={{ fontFamily: '"Syne", sans-serif', fontWeight: 700, fontSize: '28px', margin: 0, color: '#fff' }}>Welcome back, {user?.name || 'Admin'}</h2>
+            <p style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '14px', color: 'rgba(255,255,255,0.7)', margin: 0 }}>Here's what's happening with SyncSummit today.</p>
+         </div>
+         <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>Last updated just now</span>
+            <LiquidButton onClick={handleRefresh} style={{ height: '36px', padding: '0 16px', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)', borderColor: 'rgba(255,255,255,0.2)', color: '#fff' }}>
+              <RefreshCw size={14} className={loading ? "spin" : ""} style={{ marginRight: '8px' }} />
+              Refresh
+            </LiquidButton>
+         </div>
       </div>
 
       {/* KPI Cards */}
@@ -317,7 +325,7 @@ const AdminDashboard = () => {
                 <polyline points="0,160 16.6%,140 33.3%,150 50%,110 66.6%,70 83.3%,40 100%,0" fill="none" stroke="var(--violet)" strokeWidth="2" />
                 
                 {/* Data Points */}
-                {['0,160', '16.6%,140', '33.3%,150', '50%,110', '66.6%,70', '83.3%,40', '100%,0'].map((point, i) => {
+                {(stats.registrationsOverTime ? stats.registrationsOverTime.map((d, i) => `${i * 16.6}%,${200 - d.val}`) : ['0,160', '16.6%,140', '33.3%,150', '50%,110', '66.6%,70', '83.3%,40', '100%,0']).map((point, i) => {
                   const [x, y] = point.split(',');
                   return (
                     <circle key={i} cx={x} cy={y} r="4" fill="var(--orchid)" stroke="var(--bg-card)" strokeWidth="2" />
@@ -326,7 +334,9 @@ const AdminDashboard = () => {
               </svg>
               {/* X-axis labels */}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontFamily: '"JetBrains Mono", monospace', fontSize: '11px', color: 'var(--text-muted)' }}>
-                <span>Oct 1</span><span>Oct 2</span><span>Oct 3</span><span>Oct 4</span><span>Oct 5</span><span>Oct 6</span><span>Oct 7</span>
+                {(stats.registrationsOverTime ? stats.registrationsOverTime.map(d => d.day) : ['Oct 1', 'Oct 2', 'Oct 3', 'Oct 4', 'Oct 5', 'Oct 6', 'Oct 7']).map((label, idx) => (
+                  <span key={idx}>{label}</span>
+                ))}
               </div>
             </div>
           </div>
@@ -337,12 +347,12 @@ const AdminDashboard = () => {
               Revenue by Category
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {[
+              {(stats.revenueByCategory || [
                 { label: 'Apparel', val: 24500, percent: 80 },
                 { label: 'Accessories', val: 12300, percent: 45 },
                 { label: 'Digital', val: 5000, percent: 20 },
                 { label: 'Bundles', val: 4000, percent: 15 }
-              ].map((item, idx) => (
+              ]).map((item, idx) => (
                 <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ fontFamily: '"DM Sans", sans-serif', fontSize: '13px', color: 'var(--text-secondary)' }}>{item.label}</span>

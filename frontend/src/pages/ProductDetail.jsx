@@ -7,6 +7,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { MetalButton, LiquidButton } from '../components/ui/Buttons';
 import axiosInstance from '../api/axios';
+import { getDeterministicImage } from '../utils/imageUtils';
 
 // Helper Icons
 const StarFilled = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--orchid)" stroke="var(--orchid)" strokeWidth="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
@@ -47,15 +48,7 @@ const Silhouette = ({ category, size = 120 }) => {
   );
 };
 
-// API Call
-const fetchProductDetails = async (id) => {
-  try {
-    const res = await axiosInstance.get(`/products/${id}`);
-    return res.data;
-  } catch (err) {
-    return null;
-  }
-};
+// Removed fetchProductDetails inside the file level
 
 const RELATED_PRODUCTS = [];
 
@@ -84,21 +77,41 @@ const ProductDetail = () => {
     }
 
     // Fetch Product
+    const controller = new AbortController();
     const loadProduct = async () => {
       setIsLoading(true);
       setError(false);
-      const data = await fetchProductDetails(id);
-      if (!data) {
-        setError(true);
-      } else {
-        setProduct(data);
-        const firstAvailable = data.sizes?.find(s => s.available);
-        if (firstAvailable) setSelectedSize(firstAvailable.label);
+      try {
+        const res = await axiosInstance.get(`/products/${id}`, { signal: controller.signal });
+        const data = res.data;
+        if (!data) {
+          setError(true);
+        } else {
+          setProduct(data);
+          const firstAvailable = data.sizes?.find(s => s.available);
+          if (firstAvailable) setSelectedSize(firstAvailable.label);
+        }
+      } catch (err) {
+        if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+          setError(true);
+        }
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
     loadProduct();
+    
+    return () => {
+      controller.abort();
+    };
   }, [id]);
+
+  const BACKEND = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:3000';
+  const getImageUrl = (path, isGallery = false) => {
+    if (!path) return getDeterministicImage(product?.name + (isGallery ? Math.random().toString() : ''), 1200, 1200);
+    if (path.startsWith('http')) return path;
+    return `${BACKEND}${path}`;
+  };
 
   useEffect(() => {
     if (!product) return;
@@ -225,15 +238,19 @@ const ProductDetail = () => {
           
           {/* LEFT: IMAGE GALLERY */}
           <div>
-            <div style={{ width: '100%', aspectRatio: '1/1', background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Silhouette category={product.category} size={160} />
+            <div style={{ width: '100%', aspectRatio: '1/1', background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              {product.images && product.images.length > 0 ? (
+                <img src={getImageUrl(product.images[activeImageIdx])} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <img src={getImageUrl(null)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              )}
             </div>
             
-            {product.images > 1 && (
+            {(product.images && product.images.length > 1) && (
               <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                {Array.from({ length: Math.min(4, product.images) }).map((_, idx) => (
-                  <div key={idx} onClick={() => setActiveImageIdx(idx)} style={{ width: '72px', height: '72px', background: 'var(--bg-card)', border: activeImageIdx === idx ? '2px solid var(--orchid)' : '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: activeImageIdx === idx ? 1 : 0.6, transition: 'all 0.2s' }}>
-                    <Silhouette category={product.category} size={40} />
+                {product.images.map((img, idx) => (
+                  <div key={idx} onClick={() => setActiveImageIdx(idx)} style={{ width: '72px', height: '72px', background: 'var(--bg-card)', border: activeImageIdx === idx ? '2px solid var(--orchid)' : '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: activeImageIdx === idx ? 1 : 0.6, transition: 'all 0.2s', overflow: 'hidden' }}>
+                    <img src={getImageUrl(img, true)} alt={`${product.name} ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 ))}
               </div>

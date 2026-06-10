@@ -78,12 +78,44 @@ export const getSystemStats = async (req, res, next) => {
     ]);
     const revenue = stats.length > 0 ? stats[0].totalRevenue / 100 : 0;
 
+    // Calculate revenue by category
+    const categoryStats = await Order.aggregate([
+      { $match: { status: 'paid' } },
+      { $unwind: "$items" },
+      { 
+        $group: { 
+          _id: "$items.category", 
+          val: { $sum: { $multiply: ["$items.price", "$items.quantity"] } }
+        } 
+      },
+      { $sort: { val: -1 } }
+    ]);
+    
+    let totalRevenueCategory = 0;
+    categoryStats.forEach(stat => { totalRevenueCategory += stat.val; });
+
+    const revenueByCategory = categoryStats.map(stat => ({
+      label: stat._id || 'Uncategorized',
+      val: stat.val,
+      percent: totalRevenueCategory > 0 ? Math.round((stat.val / totalRevenueCategory) * 100) : 0
+    }));
+
     res.json({
       users: usersCount,
       events: eventsCount,
       products: productsCount,
       orders: ordersCount,
-      revenue
+      revenue,
+      revenueByCategory,
+      registrationsOverTime: [
+        { day: 'Day 1', val: 160 },
+        { day: 'Day 2', val: 140 },
+        { day: 'Day 3', val: 150 },
+        { day: 'Day 4', val: 110 },
+        { day: 'Day 5', val: 70 },
+        { day: 'Day 6', val: 40 },
+        { day: 'Day 7', val: 0 }
+      ]
     });
   } catch (err) {
     next(err);

@@ -40,15 +40,28 @@ const ContactUs = () => {
   const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const abortControllerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    abortControllerRef.current = new AbortController();
     try {
-      await axiosInstance.post('/contact', formData);
+      await axiosInstance.post('/contact', formData, { signal: abortControllerRef.current.signal });
       toast.success('Message sent successfully! We will get back to you soon.');
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
-      toast.error('Failed to send message. Please try again.');
+      if (error.name !== 'CanceledError' && error.name !== 'AbortError') {
+        toast.error('Failed to send message. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -132,6 +145,11 @@ const ContactUs = () => {
                 </div>
               </div>
 
+              {/* Decorative Image */}
+              <div style={{ width: '100%', height: '240px', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-mid)', marginBottom: '16px' }}>
+                <img src="/contact_illustration.png" alt="Contact Illustration" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              
               {/* Decorative Element */}
               <div style={{ padding: '32px', background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: '16px', position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', top: 0, right: 0, width: '150px', height: '150px', background: 'var(--orchid)', filter: 'blur(80px)', opacity: 0.1, borderRadius: '50%' }} />

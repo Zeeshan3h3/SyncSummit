@@ -150,8 +150,8 @@ export default function Dashboard() {
         {[
           { label: 'Events Registered', value: events.length },
           { label: 'Orders Placed', value: orders.length },
-          { label: 'Days to Summit', value: '154', extra: 'Happening soon', dot: 'var(--warning)' },
-          { label: 'Badge Status', value: 'Confirmed' }
+          { label: 'Days to Summit', value: Math.max(0, Math.floor((new Date('2025-11-15T00:00:00+05:30').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))), extra: 'Happening soon', dot: 'var(--warning)' },
+          { label: 'Badge Status', value: safeUser?.role === 'ATTENDEE' ? 'Confirmed' : safeUser?.role?.toUpperCase() || 'CONFIRMED' }
         ].map((stat, i) => (
           <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '20px', display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontFamily: 'JetBrains Mono', fontSize: '36px', color: 'var(--text-primary)', fontWeight: 500, lineHeight: 1 }}>{stat.value}</span>

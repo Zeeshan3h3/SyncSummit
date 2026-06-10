@@ -5,7 +5,10 @@ import { motion } from 'framer-motion';
 import { Globe, User, ArrowRight } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
-import axiosInstance from '../utils/axiosInstance';
+import axiosInstance from '../api/axios';
+import { getDeterministicImage } from '../utils/imageUtils';
+
+const BACKEND = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:3000';
 
 const SpeakerCard = ({ speaker, index }) => {
   return (
@@ -33,17 +36,21 @@ const SpeakerCard = ({ speaker, index }) => {
       <div style={{ position: 'relative', height: '280px', overflow: 'hidden' }}>
         {speaker.image ? (
           <img 
-            src={speaker.image.startsWith('http') ? speaker.image : `http://localhost:3000${speaker.image}`} 
+            src={speaker.image.startsWith('http') ? speaker.image : `${BACKEND}${speaker.image}`} 
             alt={speaker.name}
             style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
             onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
             onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-            onError={e => { e.target.style.display = 'none'; }}
+            onError={e => { e.target.src = getDeterministicImage(speaker.name, 400, 400); e.target.onerror = null; }}
           />
         ) : (
-          <div style={{ width: '100%', height: '100%', background: 'var(--grad-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '64px', fontWeight: 'bold', color: 'var(--lavender)' }}>
-            {speaker.name.charAt(0)}
-          </div>
+          <img 
+            src={getDeterministicImage(speaker.name, 400, 400)} 
+            alt={speaker.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+          />
         )}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)' }} />
         <div style={{ position: 'absolute', bottom: '16px', right: '16px', display: 'flex', gap: '8px' }}>
@@ -70,29 +77,36 @@ const Speakers = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axiosInstance.get('/speakers')
+    const controller = new AbortController();
+    axiosInstance.get('/speakers', { signal: controller.signal })
       .then(res => {
         setSpeakers(res.data);
       })
       .catch(err => {
-        console.error('Failed to load speakers:', err);
+        if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+          console.error('Failed to load speakers:', err);
+        }
       })
       .finally(() => {
         setLoading(false);
       });
+    return () => controller.abort();
   }, []);
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
       <Navbar />
       
-      <main style={{ flex: 1, paddingTop: '120px', paddingBottom: '100px' }}>
-        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
+      <main style={{ flex: 1, paddingBottom: '100px' }}>
+        
+        {/* Header Section */}
+        <section style={{ paddingTop: '160px', paddingBottom: '80px', paddingLeft: 'clamp(20px, 5vw, 40px)', paddingRight: 'clamp(20px, 5vw, 40px)', position: 'relative', overflow: 'hidden', marginBottom: '80px' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(6,4,10,0.95) 0%, rgba(6,4,10,0.6) 100%), url("/speakers_banner.png") center/cover no-repeat', zIndex: 0 }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(to top, var(--bg) 0%, transparent 100%)', zIndex: 0 }} />
           
-          {/* Header Section */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-            style={{ textAlign: 'center', marginBottom: '80px', maxWidth: '800px', margin: '0 auto 80px' }}
+            style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 1 }}
           >
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--grad-subtle)', border: '1px solid var(--border-mid)', padding: '6px 12px', borderRadius: '100px', marginBottom: '24px' }}>
               <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--orchid)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Visionaries & Leaders</span>
@@ -104,6 +118,9 @@ const Speakers = () => {
               Learn from the brightest minds in technology, design, and business. Our speakers are carefully selected to bring you cutting-edge insights and practical knowledge.
             </p>
           </motion.div>
+        </section>
+
+        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
 
           {/* Speakers Grid */}
           {loading ? (

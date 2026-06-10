@@ -95,3 +95,32 @@ a:focus-visible, button:focus-visible {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Responsive Utilities */
+.desktop-only { display: none !important; }
+.mobile-only { display: flex !important; }
+
+.hero-grid { grid-template-columns: 1fr !important; }
+
+@media (min-width: 1024px) {
+  .desktop-only { display: flex !important; }
+  .mobile-only { display: none !important; }
+  .hero-grid { grid-template-columns: 55% 45% !important; }
+}
+
+/* Animations */
+@keyframes spin { 
+  100% { transform: rotate(360deg); } 
+}
+
+/* Card Hover Effects */
+.event-card:hover { 
+  border-color: rgba(237, 128, 233, 0.4) !important; 
+  transform: translateY(-4px); 
+}
+.product-card:hover { 
+  border-color: rgba(237, 128, 233, 0.4) !important; 
+  transform: translateY(-4px); 
+  transition: all 0.25s ease; 
+  cursor: pointer; 
+}
