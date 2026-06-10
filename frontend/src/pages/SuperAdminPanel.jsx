@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MetalButton } from '../components/ui/Buttons';
 import useAuthStore from '../store/authStore';
@@ -649,12 +650,28 @@ const ContentManagementTab = () => {
 
 const SuperAdminPanel = () => {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('System');
   
   const tabs = ['System', 'Role Management', 'Content Management', 'Platform Settings', 'Audit Log', 'Data Export'];
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingTop: '64px', color: 'var(--text-primary)' }}>
+      {/* Top Navbar */}
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, height: '64px',
+        background: 'var(--bg)', borderBottom: '1px solid var(--border-mid)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 clamp(20px, 5vw, 80px)', zIndex: 100
+      }}>
+        <div style={{ fontFamily: '"Syne", sans-serif', fontWeight: 800, fontSize: '20px', color: 'var(--text-primary)' }}>
+          SyncSummit <span style={{ color: 'var(--warning)' }}>Admin</span>
+        </div>
+        <MetalButton onClick={() => navigate('/')}>
+          View as User
+        </MetalButton>
+      </div>
+
       {/* Header */}
       <header style={{
         background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-mid)',
