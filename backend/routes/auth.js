@@ -44,6 +44,19 @@ router.post('/logout', (req, res) => {
   res.clearCookie('token').json({ message: 'Logged out' });
 });
 
-router.get('/me', authenticate, (req, res) => res.json(req.user));
+router.get('/me', authenticate, (req, res) => {
+  // Grab the token from the cookie or header so we can pass it back to the frontend
+  const currentToken = req.cookies.token || req.headers.authorization?.split(' ')[1];
+  
+  res.json({
+    user: { 
+      id: req.user._id, 
+      name: req.user.name, 
+      role: req.user.role 
+    },
+    token: currentToken
+  });
+});
+
 
 export default router;
