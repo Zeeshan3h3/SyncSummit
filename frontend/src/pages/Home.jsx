@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { MetalButton, LiquidButton, Button } from '../components/ui/Buttons';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import api from '../services/api';
+import axiosInstance from '../api/axios';
 
 // Helper component for staggered animations
 const FadeIn = ({ children, delay = 0, duration = 0.4, y = 8, className = '', style = {} }) => (
@@ -82,7 +82,7 @@ const Home = () => {
 
   useEffect(() => {
     // Fetch real events for the featured strip
-    api.get('/event')
+    axiosInstance.get('/event')
       .then(res => {
         if (res.data && Array.isArray(res.data)) {
           setEvents(res.data.slice(0, 5)); // Take up to 5 events
