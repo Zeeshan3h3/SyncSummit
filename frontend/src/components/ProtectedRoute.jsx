@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore.js';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 
 const ProtectedRoute = ({ children, roles }) => {
   const { user, isAuthenticated, isLoading } = useAuthStore();

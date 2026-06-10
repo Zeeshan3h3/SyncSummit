@@ -3,10 +3,14 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { io } from 'socket.io-client';
-import { 
-  Calendar, Clock, MapPin, Users, Trophy, 
-  Share2, Check, X
-} from 'lucide-react';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import MapPin from 'lucide-react/dist/esm/icons/map-pin';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Trophy from 'lucide-react/dist/esm/icons/trophy';
+import Share2 from 'lucide-react/dist/esm/icons/share-2';
+import Check from 'lucide-react/dist/esm/icons/check';
+import X from 'lucide-react/dist/esm/icons/x';
 import axiosInstance from '../api/axios.js';
 import useAuthStore from '../store/authStore.js';
 import Navbar from '../components/Navbar.jsx';

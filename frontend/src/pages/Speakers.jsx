@@ -2,7 +2,9 @@ import React from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { motion } from 'framer-motion';
-import { Globe, User, ArrowRight } from 'lucide-react';
+import Globe from 'lucide-react/dist/esm/icons/globe';
+import User from 'lucide-react/dist/esm/icons/user';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 
 import { useEffect, useState } from 'react';
 import axiosInstance from '../api/axios';

@@ -5,7 +5,8 @@ import { MetalButton } from '../components/ui/Buttons';
 import useAuthStore from '../store/authStore';
 import { io } from 'socket.io-client';
 import axiosInstance from '../api/axios';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
 import toast from 'react-hot-toast';
 
 const pageVariants = {

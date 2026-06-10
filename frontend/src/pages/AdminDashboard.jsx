@@ -3,10 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { io } from 'socket.io-client';
-import {
-  LayoutDashboard, CalendarDays, Box, ShoppingCart, Users, Megaphone,
-  RefreshCw, TrendingUp, TrendingDown, Edit2, Eye, Trash2, Send, ChevronDown, Check, X, Search
-} from 'lucide-react';
+import LayoutDashboard from 'lucide-react/dist/esm/icons/layout-dashboard';
+import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days';
+import Box from 'lucide-react/dist/esm/icons/box';
+import ShoppingCart from 'lucide-react/dist/esm/icons/shopping-cart';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Megaphone from 'lucide-react/dist/esm/icons/megaphone';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import TrendingDown from 'lucide-react/dist/esm/icons/trending-down';
+import Edit2 from 'lucide-react/dist/esm/icons/edit-2';
+import Eye from 'lucide-react/dist/esm/icons/eye';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Send from 'lucide-react/dist/esm/icons/send';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import Check from 'lucide-react/dist/esm/icons/check';
+import X from 'lucide-react/dist/esm/icons/x';
+import Search from 'lucide-react/dist/esm/icons/search';
 import axiosInstance from '../api/axios.js';
 import useAuthStore from '../store/authStore.js';
 import Navbar from '../components/Navbar.jsx';

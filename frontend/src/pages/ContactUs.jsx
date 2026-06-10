@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { motion } from 'framer-motion';
-import { Mail, MapPin, Phone, MessageSquare, Send } from 'lucide-react';
+import Mail from 'lucide-react/dist/esm/icons/mail';
+import MapPin from 'lucide-react/dist/esm/icons/map-pin';
+import Phone from 'lucide-react/dist/esm/icons/phone';
+import MessageSquare from 'lucide-react/dist/esm/icons/message-square';
+import Send from 'lucide-react/dist/esm/icons/send';
 import toast from 'react-hot-toast';
 import axiosInstance from '../api/axios.js';
 

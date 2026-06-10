@@ -5,7 +5,7 @@ import { MetalButton, LiquidButton, Button } from '../components/ui/Buttons';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import axiosInstance from '../api/axios';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { getDeterministicImage } from '../utils/imageUtils';
 
 // Helper component for staggered animations

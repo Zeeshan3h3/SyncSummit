@@ -3,7 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAuthStore from '../store/authStore';
 import { MetalButton, LiquidButton } from './ui/Buttons';
-import { Menu, X } from 'lucide-react';
+import Menu from 'lucide-react/dist/esm/icons/menu';
+import X from 'lucide-react/dist/esm/icons/x';
 
 const Navbar = () => {
   const location = useLocation();
