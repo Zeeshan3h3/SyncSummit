@@ -18,6 +18,7 @@ import speakerRoutes from './routes/speakers.js';
 
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (Render) to fix express-rate-limit
 const httpServer = createServer(app);
 export const io = new Server(httpServer, {
     cors : { origin: process.env.CLIENT_URL, credentials: true}
