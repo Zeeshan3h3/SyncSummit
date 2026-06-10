@@ -11,7 +11,7 @@ const sendToken = (user, res) => {
   const token = signToken(user._id);
   res.cookie('token', token, {
     httpOnly: true, secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000
+    sameSite: 'none', maxAge: 7 * 24 * 60 * 60 * 1000
   });
   return token;
 };
@@ -48,7 +48,7 @@ router.delete('/logout', (req, res) => {
   res.clearCookie('token', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
+    sameSite: 'none'
   }).json({ message: 'Logged out' });
 });
 
