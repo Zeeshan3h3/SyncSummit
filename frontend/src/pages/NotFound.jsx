@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect  } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Navbar from '../components/Navbar';
@@ -8,14 +8,8 @@ const NotFound = () => {
   const location = useLocation();
   const pathname = location.pathname;
   
-  const [currentDate, setCurrentDate] = useState('');
-  const [isoDate, setIsoDate] = useState('');
-
-  useEffect(() => {
-    const now = new Date();
-    setCurrentDate(now.toUTCString());
-    setIsoDate(now.toISOString());
-  }, []);
+  const [currentDate, setCurrentDate] = useState(() => new Date().toUTCString());
+  const [isoDate, setIsoDate] = useState(() => new Date().toISOString());
 
   let suggestion = null;
   if (pathname.toLowerCase().includes('product')) {

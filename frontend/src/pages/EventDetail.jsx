@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect  } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -9,8 +9,6 @@ import MapPin from 'lucide-react/dist/esm/icons/map-pin';
 import Users from 'lucide-react/dist/esm/icons/users';
 import Trophy from 'lucide-react/dist/esm/icons/trophy';
 import Share2 from 'lucide-react/dist/esm/icons/share-2';
-import Check from 'lucide-react/dist/esm/icons/check';
-import X from 'lucide-react/dist/esm/icons/x';
 import axiosInstance from '../api/axios.js';
 import useAuthStore from '../store/authStore.js';
 import Navbar from '../components/Navbar.jsx';
@@ -235,8 +233,8 @@ const EventDetail = () => {
   }
 
   const BACKEND = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:3000';
-  const getImageUrl = (path, isGallery = false) => {
-    if (!path) return getDeterministicImage(event.name + (isGallery ? Math.random().toString() : ''), 1200, 600);
+  const getImageUrl = (path, index = 0) => {
+    if (!path) return getDeterministicImage(event.name + (index ? `-${index}` : ''), 1200, 600);
     // Handle cases where the path might already be an absolute URL
     if (path.startsWith('http')) return path;
     return `${BACKEND}${path}`;
@@ -517,7 +515,7 @@ const EventDetail = () => {
                       border: '1px solid var(--border-mid)'
                     }}>
                       <img 
-                        src={getImageUrl(img, true)} 
+                        src={getImageUrl(img, idx)} 
                         alt={`${event.name} gallery image ${idx + 1}`}
                         style={{
                           width: '100%',

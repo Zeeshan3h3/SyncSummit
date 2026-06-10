@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect  } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -107,8 +107,8 @@ const ProductDetail = () => {
   }, [id]);
 
   const BACKEND = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:3000';
-  const getImageUrl = (path, isGallery = false) => {
-    if (!path) return getDeterministicImage(product?.name + (isGallery ? Math.random().toString() : ''), 1200, 1200);
+  const getImageUrl = (path, index = 0) => {
+    if (!path) return getDeterministicImage(product?.name + (index ? `-${index}` : ''), 1200, 1200);
     if (path.startsWith('http')) return path;
     return `${BACKEND}${path}`;
   };
@@ -250,7 +250,7 @@ const ProductDetail = () => {
               <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                 {product.images.map((img, idx) => (
                   <div key={idx} onClick={() => setActiveImageIdx(idx)} style={{ width: '72px', height: '72px', background: 'var(--bg-card)', border: activeImageIdx === idx ? '2px solid var(--orchid)' : '1px solid var(--border-mid)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: activeImageIdx === idx ? 1 : 0.6, transition: 'all 0.2s', overflow: 'hidden' }}>
-                    <img src={getImageUrl(img, true)} alt={`${product.name} ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={getImageUrl(img, idx)} alt={`${product.name} ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 ))}
               </div>

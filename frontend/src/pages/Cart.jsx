@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect  } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -33,17 +33,12 @@ const Silhouette = ({ category, size = 80 }) => {
 };
 
 const Cart = () => {
-  const [cartItems, setCartItems] = useState([]);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [cartItems, setCartItems] = useState(() => {
+    const savedCart = sessionStorage.getItem('syncSummitCart');
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
   const navigate = useNavigate();
   const { user } = useAuthStore();
-
-  useEffect(() => {
-    const savedCart = sessionStorage.getItem('syncSummitCart');
-    if (savedCart) {
-      setCartItems(JSON.parse(savedCart));
-    }
-  }, []);
 
   const updateQuantity = (idx, delta) => {
     const newItems = [...cartItems];

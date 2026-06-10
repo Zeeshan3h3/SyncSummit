@@ -14,7 +14,7 @@ const useAuthStore = create(
         try {
           const response = await axiosInstance.get('/auth/me');
           set({ user: response.data.user || response.data, isAuthenticated: true });
-        } catch (error) {
+        } catch {
           set({ user: null, isAuthenticated: false });
         } finally {
           set({ isLoading: false });
@@ -24,7 +24,7 @@ const useAuthStore = create(
       logout: async () => {
         try {
           await axiosInstance.delete('/auth/logout');
-        } catch (error) {
+        } catch {
           console.error('[AuthStore] logout failed', error);
         } finally {
           set({ user: null, isAuthenticated: false });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect  } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MetalButton } from '../components/ui/Buttons';
@@ -416,7 +416,7 @@ const PlatformSettingsTab = () => {
 
 // --- AUDIT LOG TAB ---
 const AuditLogTab = () => {
-  const [logs, setLogs] = useState([]);
+  const [logs] = useState([]);
 
   const [expandedRow, setExpandedRow] = useState(null);
 
