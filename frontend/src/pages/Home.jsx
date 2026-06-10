@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { MetalButton, LiquidButton, Button } from '../components/ui/Buttons';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import api from '../services/api';
 
 // Helper component for staggered animations
 const FadeIn = ({ children, delay = 0, duration = 0.4, y = 8, className = '', style = {} }) => (
@@ -77,8 +78,19 @@ const StatItem = ({ endValue, label, suffix = '', prefix = '' }) => {
 const Home = () => {
   // Live Countdown Logic
   const [timeLeft, setTimeLeft] = useState({ days: 0, hrs: 0, min: 0, sec: 0 });
+  const [events, setEvents] = useState([]);
 
   useEffect(() => {
+    // Fetch real events for the featured strip
+    api.get('/event')
+      .then(res => {
+        if (res.data && Array.isArray(res.data)) {
+          setEvents(res.data.slice(0, 5)); // Take up to 5 events
+        }
+      })
+      .catch(err => console.error("Error fetching events for home:", err));
+
+
     const targetDate = new Date('2025-11-15T00:00:00+05:30').getTime();
     
     const updateTimer = () => {
@@ -227,7 +239,50 @@ const Home = () => {
 
           <div style={{ position: 'relative' }}>
             <div className="hide-scrollbar" style={{ display: 'flex', gap: '24px', overflowX: 'auto', padding: '0 clamp(20px, 5vw, 80px)' }}>
-              {[
+              {events.length > 0 ? events.map((event, i) => {
+                // Parse dates and format safely
+                let dateStr = 'TBA';
+                if (event.schedule && event.schedule.length > 0) {
+                   const start = new Date(event.schedule[0].startTime);
+                   if (!isNaN(start.getTime())) {
+                     dateStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                   } else {
+                     dateStr = event.schedule[0].startTime;
+                   }
+                } else if (event.date) {
+                   const parsed = new Date(event.date);
+                   if (!isNaN(parsed.getTime())) {
+                     dateStr = parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                   } else {
+                     dateStr = event.date;
+                   }
+                }
+                
+                return (
+                <div key={event._id || i} className="event-card" style={{
+                  width: '320px', flexShrink: 0, background: 'var(--bg-card)', border: '1px solid var(--border-mid)',
+                  borderRadius: 'var(--radius-lg)', padding: '24px', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}>
+                  <div style={{ display: 'inline-block', background: 'var(--grad-subtle)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-sm)', padding: '3px 8px', fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--orchid)' }}>
+                    {event.type || 'EVENT'}
+                  </div>
+                  <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.01em', marginTop: '12px', marginBottom: '8px' }}>{event.name || event.title}</h3>
+                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    {dateStr} · {event.venue || 'TBA'}
+                  </div>
+                  <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: 0, height: '44px' }}>
+                    {event.description || 'No description available.'}
+                  </p>
+                  <div style={{ width: '100%', height: '1px', background: 'var(--border)', margin: '16px 0' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontFamily: 'JetBrains Mono', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--orchid)' }}>{event.capacity ? Math.floor(event.capacity * 0.7) : 0}</span>
+                      <span style={{ color: 'var(--text-muted)' }}> /{event.capacity || 0} spots</span>
+                    </div>
+                    <Link to={`/events/${event._id || event.id}`}><MetalButton variant="default" size="sm">View Details</MetalButton></Link>
+                  </div>
+                </div>
+              )}) : [
                 { type: 'HACKATHON', name: 'NexusHack 2025', date: 'Nov 15, 2025', venue: 'Main Auditorium, JU', desc: '48-hour intense hackathon focusing on AI and Web3 infrastructure.', spots: '48 / 200' },
                 { type: 'CASE STUDY', name: 'Consult IQ', date: 'Nov 16, 2025', venue: 'TEQIP Building', desc: 'Tackle real-world business problems presented by top consulting firms.', spots: '12 / 50' },
                 { type: 'STARTUP PITCH', name: 'Launchpad', date: 'Nov 17, 2025', venue: 'OAT, JU', desc: 'Pitch your early-stage startup to a panel of seed investors and angels.', spots: '8 / 20' },
@@ -254,7 +309,7 @@ const Home = () => {
                       <span style={{ color: 'var(--orchid)' }}>{event.spots.split('/')[0]}</span>
                       <span style={{ color: 'var(--text-muted)' }}> /{event.spots.split('/')[1]} spots</span>
                     </div>
-                    <Link to="/events"><MetalButton variant="default" size="sm">View Details</MetalButton></Link>
+                    <Link to={`/events/${event._id || event.id || 'upcoming'}`}><MetalButton variant="default" size="sm">View Details</MetalButton></Link>
                   </div>
                 </div>
               ))}

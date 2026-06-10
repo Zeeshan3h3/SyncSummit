@@ -106,8 +106,8 @@ const EventDetail = () => {
       try {
         setLoading(true);
         // Try real API first
-        const response = await axiosInstance.get(`/events/${id}`);
-        setEvent(response.data);
+        const response = await axiosInstance.get(`/event/${id}`);
+        setEvent(response.data.event || response.data);
       } catch (err) {
         console.warn('API fetch failed, using mock data:', err);
         // Fallback to mock data
@@ -270,7 +270,21 @@ const EventDetail = () => {
     default: badgeColor = 'var(--violet)';
   }
 
-  const requiresTeam = event.teamSize.toLowerCase().includes('team');
+  const requiresTeam = event.teamSize?.toLowerCase().includes('team') || event.team_size?.toLowerCase().includes('team') || false;
+  const displayTeamSize = event.teamSize || event.team_size || 'Solo';
+  const displayPrizePool = event.prizePool || event.prize_pool || 'TBA';
+  const displaySubtitle = event.subtitle || event.tagline || '';
+
+  let displayDate = event.date || 'TBA';
+  let displayTime = event.time || 'TBA';
+
+  if (event.date) {
+    const parsed = new Date(event.date);
+    if (!isNaN(parsed.getTime())) {
+      displayDate = parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      displayTime = parsed.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+  }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg)', paddingBottom: '80px' }}>
@@ -339,7 +353,7 @@ const EventDetail = () => {
             </h1>
 
             {/* Subtitle */}
-            {event.subtitle && (
+            {displaySubtitle && (
               <p style={{
                 fontFamily: '"DM Sans", sans-serif',
                 fontWeight: 400,
@@ -348,7 +362,7 @@ const EventDetail = () => {
                 fontStyle: 'italic',
                 margin: 0
               }}>
-                {event.subtitle}
+                {displaySubtitle}
               </p>
             )}
 
@@ -376,11 +390,11 @@ const EventDetail = () => {
             {/* Rows */}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {[
-                { icon: <Calendar size={16} />, text: event.date, font: '"JetBrains Mono", monospace' },
-                { icon: <Clock size={16} />, text: event.time },
-                { icon: <MapPin size={16} />, text: event.venue },
-                { icon: <Users size={16} />, text: event.teamSize },
-                { icon: <Trophy size={16} />, text: event.prizePool, color: 'var(--orchid)' }
+                { icon: <Calendar size={16} />, text: displayDate, font: '"JetBrains Mono", monospace' },
+                { icon: <Clock size={16} />, text: displayTime },
+                { icon: <MapPin size={16} />, text: event.venue || 'TBA' },
+                { icon: <Users size={16} />, text: displayTeamSize },
+                { icon: <Trophy size={16} />, text: displayPrizePool, color: 'var(--orchid)' }
               ].map((row, idx) => (
                 <div key={idx} style={{
                   display: 'flex',
@@ -561,7 +575,7 @@ const EventDetail = () => {
                 backgroundColor: 'var(--border-mid)'
               }}></div>
               
-              {event.schedule.map((item, idx) => (
+              {event.schedule && event.schedule.length > 0 ? event.schedule.map((item, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', position: 'relative' }}>
                   <div style={{ 
                     width: '80px', 
@@ -597,7 +611,11 @@ const EventDetail = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div style={{ paddingLeft: '24px', fontFamily: '"DM Sans", sans-serif', fontSize: '15px', color: 'var(--text-secondary)' }}>
+                  Schedule will be announced soon.
+                </div>
+              )}
             </div>
           </div>
 
@@ -676,7 +694,7 @@ const EventDetail = () => {
             <h3 style={{ fontFamily: '"Syne", sans-serif', fontWeight: 700, fontSize: '20px', margin: 0 }}>Organizers</h3>
             
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {event.organizers.map((org, idx) => (
+              {event.organizers && event.organizers.length > 0 ? event.organizers.map((org, idx) => (
                 <div key={idx} style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -705,7 +723,11 @@ const EventDetail = () => {
                     </span>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div style={{ padding: '16px 0', fontFamily: '"DM Sans", sans-serif', fontSize: '14px', color: 'var(--text-secondary)' }}>
+                  To be announced.
+                </div>
+              )}
             </div>
 
             <LiquidButton style={{ width: '100%', marginTop: '8px' }}>

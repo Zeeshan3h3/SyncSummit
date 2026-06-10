@@ -181,11 +181,13 @@ export default function Dashboard() {
                 <div style={{ width: '3px', height: '36px', background: 'var(--violet)', borderRadius: '2px' }} />
                 <div style={{ flex: 1 }}>
                   <h4 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '15px', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>{evt.name}</h4>
-                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>{evt.date} · {evt.venue}</div>
+                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {evt.date ? (isNaN(new Date(evt.date).getTime()) ? evt.date : new Date(evt.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) : 'TBA'} · {evt.venue}
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <StatusBadge status={evt.status} />
-                  <MetalButton variant="default" size="sm" onClick={() => navigate(`/events/${evt.id}`)}>View Details</MetalButton>
+                  <MetalButton variant="default" size="sm" onClick={() => navigate(`/events/${evt._id || evt.id}`)}>View Details</MetalButton>
                 </div>
               </div>
             ))}
@@ -239,7 +241,7 @@ export default function Dashboard() {
               </div>
               <h3 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '20px', color: 'var(--text-primary)', margin: '0 0 8px 0' }}>{evt.name}</h3>
               <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-secondary)', margin: 0 }}>
-                {evt.date} · {evt.venue}
+                {evt.date ? (isNaN(new Date(evt.date).getTime()) ? evt.date : new Date(evt.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) : 'TBA'} · {evt.venue}
               </p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '160px' }}>
@@ -329,7 +331,7 @@ export default function Dashboard() {
             <tbody>
               {Object.entries({
                 'Email': safeUser.email,
-                'Registered On': 'October 01, 2025',
+                'Registered On': safeUser.createdAt ? new Date(safeUser.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Unknown',
                 'Role': safeUser.role,
                 'Account Status': 'Active'
               }).map(([key, val]) => (

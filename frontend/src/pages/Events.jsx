@@ -117,9 +117,9 @@ const EventCard = ({ event, index }) => {
         flexDirection: 'column'
       }}
       className="event-card-hover"
-      onClick={() => window.location.href = `/events/${event.id}`}
+      onClick={() => window.location.href = `/events/${event._id || event.id}`}
     >
-      <Link to={`/events/${event.id}`} style={{ display: 'none' }} />
+      <Link to={`/events/${event._id || event.id}`} style={{ display: 'none' }} />
 
       {/* Row 1 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -175,7 +175,9 @@ const EventCard = ({ event, index }) => {
       <div style={{ marginTop: '14px', flexGrow: 1 }}>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '4px' }}>
           <CalendarIcon size={14} color="var(--text-muted)" />
-          <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>{event.date}</span>
+          <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>
+            {event.date ? (isNaN(new Date(event.date).getTime()) ? event.date : new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) : 'TBA'}
+          </span>
         </div>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
           <LocationIcon size={14} color="var(--text-muted)" />
@@ -211,7 +213,7 @@ const EventCard = ({ event, index }) => {
           ) : isEnded ? (
             <button disabled style={{ opacity: 0.5, cursor: 'not-allowed', background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)', padding: '6px 12px', borderRadius: '4px', fontFamily: 'DM Sans', fontSize: '13px' }} onClick={(e) => e.stopPropagation()}>Ended</button>
           ) : (
-            <MetalButton variant="default" size="sm" onClick={(e) => { e.stopPropagation(); window.location.href = `/events/${event.id}`; }}>View Details</MetalButton>
+            <MetalButton variant="default" size="sm" onClick={(e) => { e.stopPropagation(); window.location.href = `/events/${event._id || event.id}`; }}>View Details</MetalButton>
           )}
         </div>
       </div>
@@ -245,7 +247,7 @@ const Events = () => {
       setIsLoading(true);
       setError(false);
       try {
-        const res = await axiosInstance.get('/events');
+        const res = await axiosInstance.get('/event');
         setEvents(res.data);
       } catch (err) {
         console.error("Failed to fetch events, using mock data", err);
@@ -262,7 +264,7 @@ const Events = () => {
     const socket = io('http://localhost:5000');
     socket.on('registration_update', ({ event_id, new_count, status }) => {
       setEvents(prev => prev.map(evt => {
-        if (evt.id === event_id) {
+        if (evt._id === event_id || evt.id === event_id) {
           return { ...evt, registered: new_count, status: status || evt.status };
         }
         return evt;
@@ -285,7 +287,7 @@ const Events = () => {
     let result = [...events];
     
     if (activeFilter !== 'All Events') {
-      result = result.filter(e => e.type === activeFilter.toUpperCase());
+      result = result.filter(e => (e.type || '').toUpperCase() === activeFilter.toUpperCase());
     }
 
     if (debouncedQuery.trim()) {
@@ -304,8 +306,15 @@ const Events = () => {
 
     result.sort((a, b) => {
       if (sortOrder === 'Date: Soonest' || sortOrder === 'Date: Latest') {
-        const dateA = new Date(a.date.split('–')[0] + ' 2025').getTime();
-        const dateB = new Date(b.date.split('–')[0] + ' 2025').getTime();
+        let dateA = new Date(a.date || '').getTime();
+        if (isNaN(dateA) && a.date) dateA = new Date(a.date.split('–')[0] + ' 2025').getTime();
+        let dateB = new Date(b.date || '').getTime();
+        if (isNaN(dateB) && b.date) dateB = new Date(b.date.split('–')[0] + ' 2025').getTime();
+        
+        // Handle still invalid dates (e.g. TBA)
+        if (isNaN(dateA)) dateA = 9999999999999; 
+        if (isNaN(dateB)) dateB = 9999999999999;
+        
         return sortOrder === 'Date: Soonest' ? dateA - dateB : dateB - dateA;
       }
       if (sortOrder === 'Spots: Low to High') {
@@ -431,24 +440,44 @@ const Events = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ paddingRight: '20px' }}>
-                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: '24px', color: 'var(--text-primary)', fontWeight: 500 }}>12</div>
+                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: '24px', color: 'var(--text-primary)', fontWeight: 500 }}>{events.length}</div>
                   <div style={{ fontFamily: 'DM Sans', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Events Total</div>
                 </div>
                 <div style={{ width: '1px', height: '36px', background: 'var(--border-mid)' }} />
                 <div style={{ padding: '0 20px' }}>
-                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: '24px', color: 'var(--text-primary)', fontWeight: 500 }}>4</div>
+                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: '24px', color: 'var(--text-primary)', fontWeight: 500 }}>{new Set(events.map(e => e.type)).size}</div>
                   <div style={{ fontFamily: 'DM Sans', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Categories</div>
                 </div>
                 <div style={{ width: '1px', height: '36px', background: 'var(--border-mid)' }} />
                 <div style={{ paddingLeft: '20px' }}>
-                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: '24px', color: 'var(--text-primary)', fontWeight: 500 }}>Nov 15–17</div>
+                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: '24px', color: 'var(--text-primary)', fontWeight: 500 }}>
+                    {events.length > 0 ? (() => {
+                      const sorted = [...events].filter(e => e.date).sort((a,b) => {
+                        let da = new Date(a.date).getTime();
+                        let db = new Date(b.date).getTime();
+                        if (isNaN(da)) da = new Date(a.date.split('–')[0] + ' 2025').getTime();
+                        if (isNaN(db)) db = new Date(b.date.split('–')[0] + ' 2025').getTime();
+                        return da - db;
+                      });
+                      if (sorted.length === 0) return 'TBA';
+                      let start = new Date(sorted[0].date);
+                      if (isNaN(start.getTime())) start = new Date(sorted[0].date.split('–')[0] + ' 2025');
+                      let end = new Date(sorted[sorted.length - 1].date);
+                      if (isNaN(end.getTime())) end = new Date(sorted[sorted.length - 1].date.split('–')[0] + ' 2025');
+                      
+                      if (isNaN(start.getTime()) || isNaN(end.getTime())) return sorted[0].date;
+                      const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                      const endStr = start.getTime() === end.getTime() ? '' : ` – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+                      return `${startStr}${endStr}`;
+                    })() : 'TBA'}
+                  </div>
                   <div style={{ fontFamily: 'DM Sans', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Dates</div>
                 </div>
               </div>
               
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--warning)', animation: 'blink-amber 1s infinite' }} />
-                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--warning)' }}>Open registration closes Nov 1, 2025</span>
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--warning)' }}>Registrations currently open</span>
               </div>
             </motion.div>
           </div>
@@ -642,7 +671,9 @@ const Events = () => {
                     <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginTop: '16px' }}>
                       <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
                         <CalendarIcon size={16} color="var(--text-muted)" />
-                        <span style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-secondary)' }}>{featuredEvent.date}</span>
+                        <span style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-secondary)' }}>
+                          {featuredEvent.date ? (isNaN(new Date(featuredEvent.date).getTime()) ? featuredEvent.date : new Date(featuredEvent.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) : 'TBA'}
+                        </span>
                       </div>
                       <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
                         <LocationIcon size={16} color="var(--text-muted)" />
@@ -683,11 +714,11 @@ const Events = () => {
                   {/* Right Col */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
                     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                      <Link to={`/events/${featuredEvent.id}`} style={{ textDecoration: 'none' }}>
+                      <Link to={`/events/${featuredEvent._id || featuredEvent.id}`} style={{ textDecoration: 'none' }}>
                         <MetalButton variant="primary">View & Register</MetalButton>
                       </Link>
                       <div style={{ marginTop: '10px' }}>
-                        <Link to={`/events/${featuredEvent.id}#schedule`} style={{ textDecoration: 'none' }}>
+                        <Link to={`/events/${featuredEvent._id || featuredEvent.id}#schedule`} style={{ textDecoration: 'none' }}>
                           <LiquidButton>See Schedule →</LiquidButton>
                         </Link>
                       </div>
@@ -712,7 +743,7 @@ const Events = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
                 {currentGridEvents.map((evt, idx) => (
-                  <EventCard key={evt.id} event={evt} index={idx} />
+                  <EventCard key={evt._id || evt.id || idx} event={evt} index={idx} />
                 ))}
               </div>
 
