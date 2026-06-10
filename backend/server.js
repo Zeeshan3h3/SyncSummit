@@ -13,6 +13,7 @@ import authRoutes from './routes/auth.js';
 import eventRoutes from './routes/events.js';
 import productRoutes from './routes/products.js';
 import adminRoutes from './routes/admin.js';
+import contactRoutes from './routes/contact.js';
 
 
 const app = express();
@@ -31,10 +32,11 @@ app.use(cookieParser());
 const limiter = rateLimit({ windowMs: 15*60*1000, max: 100});
 app.use('/api', limiter);
 app.use('/api/auth', authRoutes);
-app.use('/api/event', eventRoutes);
+app.use('/api/events', eventRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payment', paymentRoutes); 
+app.use('/api/contact', contactRoutes);
 
 // Error handling middleware (must be after routes)
 app.use((err, req, res, next) => {

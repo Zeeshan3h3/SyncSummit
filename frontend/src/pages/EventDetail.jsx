@@ -12,71 +12,7 @@ import useAuthStore from '../store/authStore.js';
 import Navbar from '../components/Navbar.jsx';
 import { MetalButton, LiquidButton } from '../components/ui/Buttons.jsx';
 
-// Fallback Mock Data in case backend is not ready
-const MOCK_EVENTS = {
-  '1': {
-    _id: '1',
-    name: 'NexusHack 2025',
-    type: 'HACKATHON',
-    subtitle: '48 hours. One problem. Ship or go home.',
-    date: 'Nov 15–16, 2025',
-    time: '10:00 AM IST onwards',
-    venue: 'Main Auditorium, JU Salt Lake Campus',
-    teamSize: 'Solo / Team of 2–4',
-    prizePool: '₹50,000 prize pool',
-    capacity: 200,
-    registered: 148,
-    description: 'NexusHack is SyncSummit\'s flagship hackathon — 48 hours of continuous building at the Jadavpur University campus. Connect with top developers, designers, and builders. Whether you are a seasoned hacker or a first-timer, this is your arena to shine.',
-    schedule: [
-      { time: '10:00 AM', activity: 'Inauguration & Problem Statement Reveal', details: 'Main Auditorium' },
-      { time: '11:00 AM', activity: 'Hacking Begins', details: 'All zones active' },
-      { time: 'Nov 16, 08:00 AM', activity: 'Midpoint Checkpoint', details: 'Submit progress reports' },
-      { time: 'Nov 16, 10:00 AM', activity: 'Hacking Ends', details: 'Final submissions due' },
-      { time: 'Nov 16, 11:00 AM', activity: 'Presentations to Jury', details: 'Top 10 teams pitch' },
-      { time: 'Nov 16, 02:00 PM', activity: 'Award Ceremony & Closing', details: 'Prize distribution' }
-    ],
-    prizes: [
-      { place: '2nd', amount: '₹15,000', description: 'Cash + Swag Kit' },
-      { place: '1st', amount: '₹25,000', description: 'Cash + Swag Kit' },
-      { place: '3rd', amount: '₹10,000', description: 'Cash + Swag Kit' }
-    ],
-    organizers: [
-      { name: 'Aditi Sharma', role: 'Lead Organizer', initials: 'AS' },
-      { name: 'Rahul Bose', role: 'Technical Head', initials: 'RB' }
-    ],
-    sponsors: [
-      { name: 'TechCorp', tier: 'TITLE SPONSOR' },
-      { name: 'DevTools Inc', tier: 'TECH PARTNER' }
-    ]
-  },
-  '2': {
-    _id: '2',
-    name: 'Consult IQ — Business Case Marathon',
-    type: 'CASE STUDY',
-    subtitle: 'Solve real-world business challenges.',
-    date: 'Dec 05, 2025',
-    time: '09:00 AM IST',
-    venue: 'Seminar Hall 1',
-    teamSize: 'Team of 3',
-    prizePool: '₹30,000 prize pool',
-    capacity: 50,
-    registered: 48,
-    description: 'Consult IQ tests your strategic thinking and business acumen. Analyze a real-world case study, formulate a strategy, and pitch your solution to industry leaders.',
-    schedule: [
-      { time: '09:00 AM', activity: 'Case Unveiling', details: 'Seminar Hall 1' },
-      { time: '02:00 PM', activity: 'Pitching Round', details: 'Jury evaluation' }
-    ],
-    prizes: [
-      { place: '2nd', amount: '₹10,000', description: 'Cash' },
-      { place: '1st', amount: '₹15,000', description: 'Cash' },
-      { place: '3rd', amount: '₹5,000', description: 'Cash' }
-    ],
-    organizers: [
-      { name: 'Sneha Roy', role: 'Event Coordinator', initials: 'SR' }
-    ],
-    sponsors: []
-  }
-};
+
 
 const EventDetail = () => {
   const { id } = useParams();
@@ -105,14 +41,13 @@ const EventDetail = () => {
     const fetchEvent = async () => {
       try {
         setLoading(true);
-        // Try real API first
-        const response = await axiosInstance.get(`/event/${id}`);
+        // Real API fetch
+        const response = await axiosInstance.get(`/events/${id}`);
         setEvent(response.data.event || response.data);
       } catch (err) {
-        console.warn('API fetch failed, using mock data:', err);
-        // Fallback to mock data
-        const mockData = MOCK_EVENTS[id] || MOCK_EVENTS['1']; // Default to NexusHack if id not found
-        setTimeout(() => setEvent(mockData), 600); // Simulate network delay
+        console.warn('API fetch failed:', err);
+        // Ensure no fallback is used per requirements
+        toast.error('Failed to load event details');
       } finally {
         setLoading(false);
       }
@@ -275,16 +210,31 @@ const EventDetail = () => {
   const displayPrizePool = event.prizePool || event.prize_pool || 'TBA';
   const displaySubtitle = event.subtitle || event.tagline || '';
 
-  let displayDate = event.date || 'TBA';
+  let displayDate = event.date || event.createdAt || 'TBA';
   let displayTime = event.time || 'TBA';
 
-  if (event.date) {
-    const parsed = new Date(event.date);
+  let dateToParse = event.date;
+  if (!dateToParse || isNaN(new Date(dateToParse).getTime())) {
+    dateToParse = event.createdAt;
+  }
+
+  if (dateToParse) {
+    const parsed = new Date(dateToParse);
     if (!isNaN(parsed.getTime())) {
       displayDate = parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      displayTime = parsed.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      if (!event.time) {
+        displayTime = parsed.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      }
     }
   }
+
+  const getImageUrl = (path) => {
+    if (!path) return null;
+    // Handle cases where the path might already be an absolute URL
+    if (path.startsWith('http')) return path;
+    // Assuming backend runs on port 3000
+    return `http://localhost:3000${path}`;
+  };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg)', paddingBottom: '80px' }}>
@@ -521,6 +471,66 @@ const EventDetail = () => {
         {/* LEFT COLUMN - Main Content */}
         <div style={{ flex: '1 1 60%', display: 'flex', flexDirection: 'column', gap: '64px', minWidth: '300px' }}>
           
+          {/* Media Gallery */}
+          {(event.thumbnail || (event.images && event.images.length > 0)) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {event.thumbnail && (
+                <div style={{
+                  width: '100%',
+                  maxHeight: '500px',
+                  borderRadius: 'var(--radius-lg)',
+                  overflow: 'hidden',
+                  border: '1px solid var(--border-mid)'
+                }}>
+                  <img 
+                    src={getImageUrl(event.thumbnail)} 
+                    alt={`${event.name} thumbnail`}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block'
+                    }}
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                </div>
+              )}
+              
+              {event.images && event.images.length > 0 && (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                  gap: '16px'
+                }}>
+                  {event.images.map((img, idx) => (
+                    <div key={idx} style={{
+                      width: '100%',
+                      aspectRatio: '16/9',
+                      borderRadius: 'var(--radius-md)',
+                      overflow: 'hidden',
+                      border: '1px solid var(--border-mid)'
+                    }}>
+                      <img 
+                        src={getImageUrl(img)} 
+                        alt={`${event.name} gallery image ${idx + 1}`}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          display: 'block',
+                          transition: 'transform 0.3s ease'
+                        }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                        onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
+                        onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* About */}
           <div>
             <h2 style={{ fontFamily: '"Syne", sans-serif', fontWeight: 700, fontSize: '28px', marginBottom: '24px' }}>

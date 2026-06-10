@@ -77,7 +77,6 @@ const ChevronDownIcon = () => (
   </svg>
 );
 
-const MOCK_EVENTS = [];
 
 // ── Edit Modal ────────────────────────────────────────────────────────────────
 const EventEditModal = ({ event, onClose, onSaved, userRole }) => {
@@ -107,7 +106,7 @@ const EventEditModal = ({ event, onClose, onSaved, userRole }) => {
       if (thumbnail) fd.append('thumbnail', thumbnail);
       images.forEach(img => fd.append('images', img));
 
-      const res = await axiosInstance.put(`/event/${event._id}`, fd, {
+      const res = await axiosInstance.put(`/events/${event._id}`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success('Event updated!');
@@ -438,7 +437,7 @@ const Events = () => {
     if (!deleteConfirmEvent) return;
     setDeleting(true);
     try {
-      await axiosInstance.delete(`/event/${deleteConfirmEvent._id}`);
+      await axiosInstance.delete(`/events/${deleteConfirmEvent._id}`);
       setEvents(prev => prev.filter(e => e._id !== deleteConfirmEvent._id));
       toast.success('Event deleted');
       setDeleteConfirmEvent(null);
@@ -457,11 +456,11 @@ const Events = () => {
       setIsLoading(true);
       setError(false);
       try {
-        const res = await axiosInstance.get('/event');
+        const res = await axiosInstance.get('/events');
         setEvents(res.data);
       } catch (err) {
-        console.error("Failed to fetch events, using mock data", err);
-        setEvents(MOCK_EVENTS); // Fallback
+        console.error("Failed to fetch events:", err);
+        setError(true);
       } finally {
         setIsLoading(false);
       }
@@ -516,10 +515,13 @@ const Events = () => {
 
     result.sort((a, b) => {
       if (sortOrder === 'Date: Soonest' || sortOrder === 'Date: Latest') {
-        let dateA = new Date(a.date || '').getTime();
+        let dateA = new Date(a.date || a.createdAt || '').getTime();
         if (isNaN(dateA) && a.date) dateA = new Date(a.date.split('–')[0] + ' 2025').getTime();
-        let dateB = new Date(b.date || '').getTime();
+        if (isNaN(dateA) && a.createdAt) dateA = new Date(a.createdAt).getTime();
+
+        let dateB = new Date(b.date || b.createdAt || '').getTime();
         if (isNaN(dateB) && b.date) dateB = new Date(b.date.split('–')[0] + ' 2025').getTime();
+        if (isNaN(dateB) && b.createdAt) dateB = new Date(b.createdAt).getTime();
         
         // Handle still invalid dates (e.g. TBA)
         if (isNaN(dateA)) dateA = 9999999999999; 
@@ -662,20 +664,28 @@ const Events = () => {
                 <div style={{ paddingLeft: '20px' }}>
                   <div style={{ fontFamily: 'JetBrains Mono', fontSize: '24px', color: 'var(--text-primary)', fontWeight: 500 }}>
                     {events.length > 0 ? (() => {
-                      const sorted = [...events].filter(e => e.date).sort((a,b) => {
-                        let da = new Date(a.date).getTime();
-                        let db = new Date(b.date).getTime();
-                        if (isNaN(da)) da = new Date(a.date.split('–')[0] + ' 2025').getTime();
-                        if (isNaN(db)) db = new Date(b.date.split('–')[0] + ' 2025').getTime();
+                      const sorted = [...events].filter(e => e.date || e.createdAt).sort((a,b) => {
+                        let da = new Date(a.date || a.createdAt).getTime();
+                        let db = new Date(b.date || b.createdAt).getTime();
+                        if (isNaN(da) && a.date) da = new Date(a.date.split('–')[0] + ' 2025').getTime();
+                        if (isNaN(db) && b.date) db = new Date(b.date.split('–')[0] + ' 2025').getTime();
+                        if (isNaN(da) && a.createdAt) da = new Date(a.createdAt).getTime();
+                        if (isNaN(db) && b.createdAt) db = new Date(b.createdAt).getTime();
                         return da - db;
                       });
                       if (sorted.length === 0) return 'TBA';
-                      let start = new Date(sorted[0].date);
-                      if (isNaN(start.getTime())) start = new Date(sorted[0].date.split('–')[0] + ' 2025');
-                      let end = new Date(sorted[sorted.length - 1].date);
-                      if (isNaN(end.getTime())) end = new Date(sorted[sorted.length - 1].date.split('–')[0] + ' 2025');
                       
-                      if (isNaN(start.getTime()) || isNaN(end.getTime())) return sorted[0].date;
+                      const getSafeDate = (evt) => {
+                        let d = new Date(evt.date || evt.createdAt);
+                        if (isNaN(d.getTime()) && evt.date) d = new Date(evt.date.split('–')[0] + ' 2025');
+                        if (isNaN(d.getTime()) && evt.createdAt) d = new Date(evt.createdAt);
+                        return d;
+                      };
+                      
+                      let start = getSafeDate(sorted[0]);
+                      let end = getSafeDate(sorted[sorted.length - 1]);
+                      
+                      if (isNaN(start.getTime()) || isNaN(end.getTime())) return sorted[0].date || new Date(sorted[0].createdAt).toLocaleDateString();
                       const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                       const endStr = start.getTime() === end.getTime() ? '' : ` – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
                       return `${startStr}${endStr}`;
@@ -854,14 +864,26 @@ const Events = () => {
                   initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
                   style={{
                     background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-xl)',
-                    padding: '36px 40px', minHeight: '200px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px',
-                    marginBottom: '60px', transition: 'border-color 0.25s'
+                    padding: '36px 40px', minHeight: '200px', display: 'flex', flexDirection: 'column', gap: '32px',
+                    marginBottom: '60px', transition: 'border-color 0.25s', overflow: 'hidden'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.borderColor = 'rgba(237,128,233,0.35)'}
                   onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-mid)'}
                 >
-                  {/* Left Col */}
-                  <div>
+                  {featuredEvent.thumbnail && (
+                    <div style={{ margin: '-36px -40px 0', height: '250px', borderBottom: '1px solid var(--border-mid)' }}>
+                      <img 
+                        src={featuredEvent.thumbnail.startsWith('http') ? featuredEvent.thumbnail : `http://localhost:3000${featuredEvent.thumbnail}`} 
+                        alt={featuredEvent.name} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        onError={e => { e.target.style.display = 'none'; }}
+                      />
+                    </div>
+                  )}
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
+                    {/* Left Col */}
+                    <div>
                     <div style={{ background: 'var(--grad-primary)', fontFamily: 'JetBrains Mono', fontSize: '9px', color: 'white', textTransform: 'uppercase', letterSpacing: '0.12em', padding: '4px 10px', borderRadius: 'var(--radius-sm)', display: 'inline-block', marginBottom: '14px' }}>
                       FEATURED
                     </div>
@@ -922,21 +944,22 @@ const Events = () => {
                   </div>
 
                   {/* Right Col */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
-                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                      <Link to={`/events/${featuredEvent._id || featuredEvent.id}`} style={{ textDecoration: 'none' }}>
-                        <MetalButton variant="primary">View & Register</MetalButton>
-                      </Link>
-                      <div style={{ marginTop: '10px' }}>
-                        <Link to={`/events/${featuredEvent._id || featuredEvent.id}#schedule`} style={{ textDecoration: 'none' }}>
-                          <LiquidButton>See Schedule →</LiquidButton>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
+                      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <Link to={`/events/${featuredEvent._id || featuredEvent.id}`} style={{ textDecoration: 'none' }}>
+                          <MetalButton variant="primary">View & Register</MetalButton>
                         </Link>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '16px' }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: featuredEvent.status === 'OPEN' ? 'var(--success)' : featuredEvent.status === 'FULL' ? 'var(--error)' : 'var(--warning)' }} />
-                        <span style={{ fontFamily: 'DM Sans', fontSize: '13px', color: featuredEvent.status === 'OPEN' ? 'var(--success)' : featuredEvent.status === 'FULL' ? 'var(--error)' : 'var(--warning)' }}>
-                          {featuredEvent.status === 'OPEN' ? 'Registration open' : featuredEvent.status === 'FULL' ? 'Registration closed' : 'Closing soon'}
-                        </span>
+                        <div style={{ marginTop: '10px' }}>
+                          <Link to={`/events/${featuredEvent._id || featuredEvent.id}#schedule`} style={{ textDecoration: 'none' }}>
+                            <LiquidButton>See Schedule →</LiquidButton>
+                          </Link>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '16px' }}>
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: featuredEvent.status === 'OPEN' ? 'var(--success)' : featuredEvent.status === 'FULL' ? 'var(--error)' : 'var(--warning)' }} />
+                          <span style={{ fontFamily: 'DM Sans', fontSize: '13px', color: featuredEvent.status === 'OPEN' ? 'var(--success)' : featuredEvent.status === 'FULL' ? 'var(--error)' : 'var(--warning)' }}>
+                            {featuredEvent.status === 'OPEN' ? 'Registration open' : featuredEvent.status === 'FULL' ? 'Registration closed' : 'Closing soon'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -258,14 +258,29 @@ const Home = () => {
                    }
                 }
                 
+                if (dateStr === 'TBA' && event.createdAt) {
+                   dateStr = new Date(event.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                }
+                
+                const BACKEND = 'http://localhost:3000';
+                const thumbUrl = event.thumbnail ? (event.thumbnail.startsWith('http') ? event.thumbnail : `${BACKEND}${event.thumbnail}`) : null;
+                
                 return (
                 <div key={event._id || i} className="event-card" style={{
                   width: '320px', flexShrink: 0, background: 'var(--bg-card)', border: '1px solid var(--border-mid)',
-                  borderRadius: 'var(--radius-lg)', padding: '24px', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+                  borderRadius: 'var(--radius-lg)', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}>
-                  <div style={{ display: 'inline-block', background: 'var(--grad-subtle)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-sm)', padding: '3px 8px', fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--orchid)' }}>
-                    {event.type || 'EVENT'}
-                  </div>
+                  {thumbUrl ? (
+                    <div style={{ height: '140px', width: '100%', overflow: 'hidden' }}>
+                      <img src={thumbUrl} alt={event.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; e.target.parentElement.style.background = 'var(--bg-elevated)'; }} />
+                    </div>
+                  ) : (
+                    <div style={{ height: '6px', background: 'var(--grad-primary)', width: '100%' }} />
+                  )}
+                  <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                    <div style={{ alignSelf: 'flex-start', background: 'var(--grad-subtle)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-sm)', padding: '3px 8px', fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--orchid)' }}>
+                      {event.type || 'EVENT'}
+                    </div>
                   <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.01em', marginTop: '12px', marginBottom: '8px' }}>{event.name || event.title}</h3>
                   <div style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
                     {dateStr} · {event.venue || 'TBA'}
@@ -281,38 +296,13 @@ const Home = () => {
                     </div>
                     <Link to={`/events/${event._id || event.id}`}><MetalButton variant="default" size="sm">View Details</MetalButton></Link>
                   </div>
-                </div>
-              )}) : [
-                { type: 'HACKATHON', name: 'NexusHack 2025', date: 'Nov 15, 2025', venue: 'Main Auditorium, JU', desc: '48-hour intense hackathon focusing on AI and Web3 infrastructure.', spots: '48 / 200' },
-                { type: 'CASE STUDY', name: 'Consult IQ', date: 'Nov 16, 2025', venue: 'TEQIP Building', desc: 'Tackle real-world business problems presented by top consulting firms.', spots: '12 / 50' },
-                { type: 'STARTUP PITCH', name: 'Launchpad', date: 'Nov 17, 2025', venue: 'OAT, JU', desc: 'Pitch your early-stage startup to a panel of seed investors and angels.', spots: '8 / 20' },
-                { type: 'WORKSHOP', name: 'DesignDrift', date: 'Nov 16, 2025', venue: 'Design Lab', desc: 'Product design sprint focusing on user psychology and wireframing.', spots: '45 / 60' },
-                { type: 'WORKSHOP', name: 'Cloud Native', date: 'Nov 15, 2025', venue: 'Lab 3', desc: 'Hands-on workshop on Kubernetes and distributed systems architecture.', spots: '30 / 40' }
-              ].map((event, i) => (
-                <div key={i} className="event-card" style={{
-                  width: '320px', flexShrink: 0, background: 'var(--bg-card)', border: '1px solid var(--border-mid)',
-                  borderRadius: 'var(--radius-lg)', padding: '24px', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}>
-                  <div style={{ display: 'inline-block', background: 'var(--grad-subtle)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-sm)', padding: '3px 8px', fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--orchid)' }}>
-                    {event.type}
-                  </div>
-                  <h3 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.01em', marginTop: '12px', marginBottom: '8px' }}>{event.name}</h3>
-                  <div style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                    {event.date} · {event.venue}
-                  </div>
-                  <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: 0, height: '44px' }}>
-                    {event.desc}
-                  </p>
-                  <div style={{ width: '100%', height: '1px', background: 'var(--border)', margin: '16px 0' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontFamily: 'JetBrains Mono', fontSize: '12px' }}>
-                      <span style={{ color: 'var(--orchid)' }}>{event.spots.split('/')[0]}</span>
-                      <span style={{ color: 'var(--text-muted)' }}> /{event.spots.split('/')[1]} spots</span>
-                    </div>
-                    <Link to={`/events/${event._id || event.id || 'upcoming'}`}><MetalButton variant="default" size="sm">View Details</MetalButton></Link>
                   </div>
                 </div>
-              ))}
+              )}) : (
+                <div style={{ width: '100%', textAlign: 'center', padding: '40px 0', fontFamily: 'DM Sans', color: 'var(--text-muted)' }}>
+                  No events announced yet. Stay tuned!
+                </div>
+              )}
             </div>
             <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: '100px', background: 'linear-gradient(to right, transparent, var(--bg))', pointerEvents: 'none' }} />
           </div>

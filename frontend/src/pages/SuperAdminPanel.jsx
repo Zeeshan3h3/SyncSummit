@@ -560,6 +560,18 @@ const DataExportTab = () => {
     finally { setExporting(null); }
   };
 
+  const handleExportContacts = async () => {
+    setExporting('contacts');
+    try {
+      const { data } = await axiosInstance.get('/contact');
+      const rows = [['Name', 'Email', 'Subject', 'Message', 'Status', 'Submitted At']];
+      data.forEach(c => rows.push([c.name, c.email, c.subject, c.message, c.status, c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '']));
+      downloadCSV('contact_messages.csv', rows);
+      toast.success('Contacts CSV downloaded');
+    } catch { toast.error('Failed to export contacts'); }
+    finally { setExporting(null); }
+  };
+
   return (
     <motion.div variants={pageVariants} initial="initial" animate="in" exit="out">
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
@@ -615,13 +627,26 @@ const DataExportTab = () => {
             <MetalButton onClick={handleExportEventRegs} disabled={exporting === 'events' || !selectedEventId} style={{ width: '100%' }}>
               {exporting === 'events' ? 'Generating...' : 'Export Registrations as CSV'}
             </MetalButton>
-            <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--success)', textAlign: 'center' }}>✓ Live from DB · {events.length} events loaded</div>
+            <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--success)', textAlign: 'center' }}>✓ Event-specific Export</div>
+          </div>
+        </div>
+
+        {/* Contact Messages Export */}
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <h4 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '16px', color: 'var(--text-primary)', marginBottom: '4px' }}>Contact Form Submissions</h4>
+            <p style={{ fontFamily: 'DM Sans', fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>Download all queries and messages submitted via the Contact Us page.</p>
+          </div>
+          <div style={{ marginTop: 'auto' }}>
+            <MetalButton onClick={handleExportContacts} disabled={exporting === 'contacts'} style={{ width: '100%', marginBottom: '12px' }}>
+              {exporting === 'contacts' ? 'Generating...' : 'Export Contact Messages'}
+            </MetalButton>
+            <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--success)', textAlign: 'center' }}>✓ Live from DB</div>
           </div>
         </div>
 
       </div>
     </motion.div>
-
   );
 };
 
@@ -633,14 +658,27 @@ const ContentManagementTab = () => {
   const handleEventSubmit = async (e) => {
     e.preventDefault();
     try {
+      const parsedCapacity = Number(eventData.capacity);
+      const parsedPrice = Number(eventData.price);
+      
+      if (isNaN(parsedCapacity) || parsedCapacity < 0) {
+        toast.error('Please enter a valid capacity');
+        return;
+      }
+      
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        toast.error('Please enter a valid price');
+        return;
+      }
+
       const formData = new FormData();
       formData.append('name', eventData.title);
       formData.append('type', eventData.category);
       formData.append('date', eventData.date);
       formData.append('venue', eventData.location);
-      formData.append('capacity', Number(eventData.capacity));
+      formData.append('capacity', parsedCapacity);
       formData.append('description', eventData.description);
-      formData.append('price', Number(eventData.price));
+      formData.append('price', parsedPrice);
       formData.append('team_size', 'Solo / Team');
       
       if (eventData.thumbnail) {
@@ -652,7 +690,7 @@ const ContentManagementTab = () => {
         }
       }
 
-      await axiosInstance.post('/event', formData, {
+      await axiosInstance.post('/events', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -668,11 +706,24 @@ const ContentManagementTab = () => {
   const handleProductSubmit = async (e) => {
     e.preventDefault();
     try {
+      const parsedPrice = Number(productData.price);
+      const parsedStock = Number(productData.stock);
+      
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        toast.error('Please enter a valid price');
+        return;
+      }
+      
+      if (isNaN(parsedStock) || parsedStock < 0) {
+        toast.error('Please enter a valid stock amount');
+        return;
+      }
+
       const formData = new FormData();
       formData.append('name', productData.title);
       formData.append('category', productData.category);
-      formData.append('price', Number(productData.price));
-      formData.append('stock', Number(productData.stock));
+      formData.append('price', parsedPrice);
+      formData.append('stock', parsedStock);
       
       const sizesArray = productData.sizes.split(',').map(s => ({ label: s.trim(), available: true }));
       formData.append('sizes', JSON.stringify(sizesArray));
