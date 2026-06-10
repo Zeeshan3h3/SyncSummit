@@ -21,14 +21,19 @@ export const getEvent = async (req, res, next) => {
   }
 };
 
-// POST create a new event (Admin/Superadmin)
+// POST create a new event (Admin/Superadmin only)
 export const createEvent = async (req, res, next) => {
   try {
-    // req.user.id comes from the authenticate middleware
+    const thumbnailPath = req.files && req.files['thumbnail'] ? `/uploads/${req.files['thumbnail'][0].filename}` : '';
+    const imagesPaths = req.files && req.files['images'] ? req.files['images'].map(file => `/uploads/${file.filename}`) : [];
+
     const newEvent = new Event({
       ...req.body,
+      thumbnail: thumbnailPath,
+      images: imagesPaths,
       createdBy: req.user._id 
     });
+    
     const savedEvent = await newEvent.save();
     res.status(201).json(savedEvent);
   } catch (err) {
@@ -39,8 +44,17 @@ export const createEvent = async (req, res, next) => {
 // PUT update an event (Admin/Superadmin)
 export const updateEvent = async (req, res, next) => {
   try {
-    // { new: true } returns the updated document, runValidators ensures schema rules apply
-    const updatedEvent = await Event.findByIdAndUpdate(req.params.id, req.body, { 
+    const updateData = { ...req.body };
+
+    // Handle new file uploads if provided
+    if (req.files && req.files['thumbnail'] && req.files['thumbnail'].length > 0) {
+      updateData.thumbnail = `/uploads/${req.files['thumbnail'][0].filename}`;
+    }
+    if (req.files && req.files['images'] && req.files['images'].length > 0) {
+      updateData.images = req.files['images'].map(file => `/uploads/${file.filename}`);
+    }
+
+    const updatedEvent = await Event.findByIdAndUpdate(req.params.id, updateData, { 
       new: true, 
       runValidators: true 
     });

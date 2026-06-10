@@ -496,13 +496,68 @@ const AuditLogTab = () => {
 // --- DATA EXPORT TAB ---
 const DataExportTab = () => {
   const [exporting, setExporting] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [selectedEventId, setSelectedEventId] = useState('');
+  const [loadingData, setLoadingData] = useState(true);
 
-  const handleExport = (type) => {
-    setExporting(type);
-    setTimeout(() => {
-      toast.success('Export ready — downloading now');
-      setExporting(null);
-    }, 1500);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [evRes, ordRes] = await Promise.allSettled([
+          axiosInstance.get('/event'),
+          axiosInstance.get('/admin/orders'),
+        ]);
+        if (evRes.status === 'fulfilled') setEvents(evRes.value.data);
+        if (ordRes.status === 'fulfilled') setOrders(ordRes.value.data);
+      } catch (err) { /* silent */ }
+      finally { setLoadingData(false); }
+    };
+    fetchData();
+  }, []);
+
+  const downloadCSV = (filename, rows) => {
+    const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportUsers = async () => {
+    setExporting('users');
+    try {
+      const { data } = await axiosInstance.get('/admin/users');
+      const rows = [['Name', 'Email', 'Role', 'Joined', 'Last Login']];
+      data.forEach(u => rows.push([u.name, u.email, u.role, u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '', u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : '']));
+      downloadCSV('users_export.csv', rows);
+      toast.success('Users CSV downloaded');
+    } catch { toast.error('Failed to export users'); }
+    finally { setExporting(null); }
+  };
+
+  const handleExportOrders = () => {
+    if (orders.length === 0) { toast.error('No orders found'); return; }
+    setExporting('orders');
+    const rows = [['Order ID', 'User', 'Product', 'Amount (₹)', 'Status', 'Date']];
+    orders.forEach(o => rows.push([o._id, o.user?.name || o.user, o.product?.name || o.productId, o.amount, o.status, o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '']));
+    downloadCSV('orders_export.csv', rows);
+    toast.success('Orders CSV downloaded');
+    setExporting(null);
+  };
+
+  const handleExportEventRegs = async () => {
+    if (!selectedEventId) { toast.error('Select an event first'); return; }
+    setExporting('events');
+    try {
+      const { data } = await axiosInstance.get(`/admin/registrations/${selectedEventId}`);
+      const rows = [['Name', 'Email', 'Team', 'Status', 'Registered At']];
+      data.forEach(r => rows.push([r.name || r.user?.name, r.email || r.user?.email, r.team || '', r.status || 'registered', r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '']));
+      downloadCSV(`event_registrations_${selectedEventId}.csv`, rows);
+      toast.success('Event registrations CSV downloaded');
+    } catch { toast.error('Failed to export registrations'); }
+    finally { setExporting(null); }
   };
 
   return (
@@ -516,10 +571,10 @@ const DataExportTab = () => {
             <p style={{ fontFamily: 'DM Sans', fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>Download a complete CSV of all registered users, including their roles and contact info.</p>
           </div>
           <div style={{ marginTop: 'auto' }}>
-            <MetalButton onClick={() => handleExport('users')} disabled={exporting === 'users'} style={{ width: '100%', marginBottom: '12px' }}>
-              {exporting === 'users' ? 'Generating...' : 'Export as CSV'}
+            <MetalButton onClick={handleExportUsers} disabled={exporting === 'users'} style={{ width: '100%', marginBottom: '12px' }}>
+              {exporting === 'users' ? 'Generating...' : 'Export Users as CSV'}
             </MetalButton>
-            <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>Last exported: Never</div>
+            <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--success)', textAlign: 'center' }}>✓ Live from DB</div>
           </div>
         </div>
 
@@ -527,13 +582,16 @@ const DataExportTab = () => {
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
             <h4 style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: '16px', color: 'var(--text-primary)', marginBottom: '4px' }}>Orders Export</h4>
-            <p style={{ fontFamily: 'DM Sans', fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>Full transaction history including order status, amounts, and Razorpay payment IDs.</p>
+            <p style={{ fontFamily: 'DM Sans', fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>Full transaction history including order status, amounts, and payment IDs.</p>
+          </div>
+          <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '6px', padding: '12px', fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-secondary)', maxHeight: '100px', overflowY: 'auto' }}>
+            {loadingData ? 'Loading...' : orders.length === 0 ? 'No orders in DB yet' : `${orders.length} orders loaded`}
           </div>
           <div style={{ marginTop: 'auto' }}>
-            <MetalButton onClick={() => handleExport('orders')} disabled={exporting === 'orders'} style={{ width: '100%', marginBottom: '12px' }}>
-              {exporting === 'orders' ? 'Generating...' : 'Export as CSV'}
+            <MetalButton onClick={handleExportOrders} disabled={exporting === 'orders' || orders.length === 0} style={{ width: '100%', marginBottom: '12px' }}>
+              {exporting === 'orders' ? 'Generating...' : `Export ${orders.length} Orders as CSV`}
             </MetalButton>
-            <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>Last exported: Yesterday</div>
+            <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--success)', textAlign: 'center' }}>✓ Live from DB</div>
           </div>
         </div>
 
@@ -544,48 +602,64 @@ const DataExportTab = () => {
             <p style={{ fontFamily: 'DM Sans', fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>Export participant lists per event, including team details and check-in status.</p>
           </div>
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <select style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '13px', outline: 'none' }}>
-              <option>Select an event...</option>
-              <option>Hackathon 2025</option>
-              <option>Tech Talk: AI</option>
+            <select
+              value={selectedEventId}
+              onChange={e => setSelectedEventId(e.target.value)}
+              style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontSize: '13px', outline: 'none' }}
+            >
+              <option value="">Select an event...</option>
+              {events.map(ev => (
+                <option key={ev._id} value={ev._id}>{ev.name}</option>
+              ))}
             </select>
-            <MetalButton onClick={() => handleExport('events')} disabled={exporting === 'events'} style={{ width: '100%' }}>
-              {exporting === 'events' ? 'Generating...' : 'Export as CSV'}
+            <MetalButton onClick={handleExportEventRegs} disabled={exporting === 'events' || !selectedEventId} style={{ width: '100%' }}>
+              {exporting === 'events' ? 'Generating...' : 'Export Registrations as CSV'}
             </MetalButton>
-            <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>Last exported: Never</div>
+            <div style={{ fontFamily: 'JetBrains Mono', fontSize: '11px', color: 'var(--success)', textAlign: 'center' }}>✓ Live from DB · {events.length} events loaded</div>
           </div>
         </div>
 
       </div>
     </motion.div>
+
   );
 };
 
 // --- CONTENT MANAGEMENT TAB ---
 const ContentManagementTab = () => {
-  const [eventData, setEventData] = useState({ title: '', date: '', location: '', category: '', price: '', capacity: '', description: '', image: '' });
-  const [productData, setProductData] = useState({ title: '', category: '', price: '', stock: '', description: '', sizes: '', image: '' });
+  const [eventData, setEventData] = useState({ title: '', date: '', location: '', category: '', price: '', capacity: '', description: '', thumbnail: null, images: [] });
+  const [productData, setProductData] = useState({ title: '', category: '', price: '', stock: '', description: '', sizes: '', thumbnail: null, images: [] });
 
   const handleEventSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axiosInstance.post('/event', {
-        name: eventData.title,
-        type: eventData.category,
-        date: eventData.date,
-        venue: eventData.location,
-        capacity: Number(eventData.capacity),
-        description: eventData.description,
-        imageUrl: eventData.image,
-        price: Number(eventData.price),
-        team_size: 'Solo / Team',
-        schedule: [],
-        prizes: [],
-        organizers: [],
-        sponsors: []
+      const formData = new FormData();
+      formData.append('name', eventData.title);
+      formData.append('type', eventData.category);
+      formData.append('date', eventData.date);
+      formData.append('venue', eventData.location);
+      formData.append('capacity', Number(eventData.capacity));
+      formData.append('description', eventData.description);
+      formData.append('price', Number(eventData.price));
+      formData.append('team_size', 'Solo / Team');
+      
+      if (eventData.thumbnail) {
+        formData.append('thumbnail', eventData.thumbnail);
+      }
+      if (eventData.images && eventData.images.length > 0) {
+        for (let i = 0; i < eventData.images.length; i++) {
+          formData.append('images', eventData.images[i]);
+        }
+      }
+
+      await axiosInstance.post('/event', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
       toast.success('Event created successfully');
-      setEventData({ title: '', date: '', location: '', category: '', price: '', capacity: '', description: '', image: '' });
+      setEventData({ title: '', date: '', location: '', category: '', price: '', capacity: '', description: '', thumbnail: null, images: [] });
+      e.target.reset();
     } catch (err) {
       toast.error('Failed to create event');
     }
@@ -594,17 +668,33 @@ const ContentManagementTab = () => {
   const handleProductSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axiosInstance.post('/products', {
-        name: productData.title,
-        category: productData.category,
-        price: Number(productData.price),
-        stock: Number(productData.stock),
-        sizes: productData.sizes.split(',').map(s => ({ label: s.trim(), available: true })),
-        description: [productData.description],
-        imageUrl: productData.image
+      const formData = new FormData();
+      formData.append('name', productData.title);
+      formData.append('category', productData.category);
+      formData.append('price', Number(productData.price));
+      formData.append('stock', Number(productData.stock));
+      
+      const sizesArray = productData.sizes.split(',').map(s => ({ label: s.trim(), available: true }));
+      formData.append('sizes', JSON.stringify(sizesArray));
+      formData.append('description', JSON.stringify([productData.description]));
+
+      if (productData.thumbnail) {
+        formData.append('thumbnail', productData.thumbnail);
+      }
+      if (productData.images && productData.images.length > 0) {
+        for (let i = 0; i < productData.images.length; i++) {
+          formData.append('images', productData.images[i]);
+        }
+      }
+
+      await axiosInstance.post('/products', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
       toast.success('Product created successfully');
-      setProductData({ title: '', category: '', price: '', stock: '', description: '', sizes: '', image: '' });
+      setProductData({ title: '', category: '', price: '', stock: '', description: '', sizes: '', thumbnail: null, images: [] });
+      e.target.reset();
     } catch (err) {
       toast.error('Failed to create product');
     }
@@ -623,7 +713,17 @@ const ContentManagementTab = () => {
           <input placeholder="Category (e.g. Conference)" required value={eventData.category} onChange={e => setEventData({...eventData, category: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
           <input placeholder="Price (INR)" type="number" required value={eventData.price} onChange={e => setEventData({...eventData, price: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
           <input placeholder="Capacity" type="number" required value={eventData.capacity} onChange={e => setEventData({...eventData, capacity: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
-          <input placeholder="Image URL" value={eventData.image} onChange={e => setEventData({...eventData, image: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Thumbnail Image</label>
+            <input type="file" accept="image/*" onChange={e => setEventData({...eventData, thumbnail: e.target.files[0]})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Gallery Images (Multiple)</label>
+            <input type="file" multiple accept="image/*" onChange={e => setEventData({...eventData, images: e.target.files})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          </div>
+
           <textarea placeholder="Description" required value={eventData.description} onChange={e => setEventData({...eventData, description: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)', height: '100px' }} />
           <MetalButton type="submit" variant="primary">Create Event</MetalButton>
         </form>
@@ -638,7 +738,17 @@ const ContentManagementTab = () => {
           <input placeholder="Price (INR)" type="number" required value={productData.price} onChange={e => setProductData({...productData, price: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
           <input placeholder="Stock Quantity" type="number" required value={productData.stock} onChange={e => setProductData({...productData, stock: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
           <input placeholder="Sizes (comma separated, e.g. S, M, L)" value={productData.sizes} onChange={e => setProductData({...productData, sizes: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
-          <input placeholder="Image URL" value={productData.image} onChange={e => setProductData({...productData, image: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Product Thumbnail</label>
+            <input type="file" accept="image/*" onChange={e => setProductData({...productData, thumbnail: e.target.files[0]})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Product Images (Multiple)</label>
+            <input type="file" multiple accept="image/*" onChange={e => setProductData({...productData, images: e.target.files})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)' }} />
+          </div>
+
           <textarea placeholder="Description" required value={productData.description} onChange={e => setProductData({...productData, description: e.target.value})} style={{ background: 'var(--bg)', border: '1px solid var(--border-mid)', borderRadius: '4px', padding: '12px', color: 'var(--text-primary)', height: '100px' }} />
           <MetalButton type="submit" variant="primary">Create Product</MetalButton>
         </form>

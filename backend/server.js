@@ -22,7 +22,8 @@ export const io = new Server(httpServer, {
 })
 
 //middlewares 
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: false })); // allows loading images from same origin
+app.use(express.static('public'));
 app.use(cors({origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());

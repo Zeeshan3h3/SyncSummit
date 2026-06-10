@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, authorize } from '../middleware/auth.js';
+import upload from '../middleware/upload.js';
 import { 
   getAllProducts, 
   getProduct, 
@@ -12,8 +13,8 @@ const router = express.Router();
 
 router.get('/', getAllProducts);
 router.get('/:id', getProduct);             
-router.post('/', authenticate, authorize('admin','superadmin'), createProduct);
-router.put('/:id', authenticate, authorize('admin','superadmin'), updateProduct);
+router.post('/', authenticate, authorize('superadmin'), upload, createProduct);
+router.put('/:id', authenticate, authorize('admin','superadmin'), upload, updateProduct);
 router.delete('/:id', authenticate, authorize('superadmin'), deleteProduct);
 
 export default router;

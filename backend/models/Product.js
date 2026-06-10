@@ -13,8 +13,8 @@ const productSchema = new Schema({
   description: [String],
   specifications: { type: Map, of: String },
   reviews: [{ name: String, date: String, rating: Number, text: String }],
-  imageUrl: String,
-  images: { type: Number, default: 1 } // frontend simulates images
+  thumbnail: String,
+  images: [{ type: String }]
 }, { timestamps: true });
 
 export default mongoose.model('Product', productSchema);

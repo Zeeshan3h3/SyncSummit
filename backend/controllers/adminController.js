@@ -89,3 +89,27 @@ export const getSystemStats = async (req, res, next) => {
     next(err);
   }
 };
+
+// GET all orders with user info (Admin/Superadmin)
+export const getOrders = async (req, res, next) => {
+  try {
+    const orders = await Order.find()
+      .populate('user', 'name email')
+      .sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET event registrations by eventId (Admin/Superadmin)
+export const getEventRegistrations = async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.eventId)
+      .populate('registrations', 'name email');
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    res.json(event.registrations || []);
+  } catch (err) {
+    next(err);
+  }
+};

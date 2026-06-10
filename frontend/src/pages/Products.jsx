@@ -7,6 +7,90 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { MetalButton } from '../components/ui/Buttons';
 import axiosInstance from '../api/axios';
+import useAuthStore from '../store/authStore';
+
+const BACKEND = 'http://localhost:3000';
+
+// ── Product Edit Modal ──────────────────────────────────────────────────────
+const ProductEditModal = ({ product, onClose, onSaved, userRole }) => {
+  const [form, setForm] = useState({
+    name: product.name || '',
+    category: product.category || '',
+    price: product.price || '',
+    original_price: product.original_price || '',
+    stock: product.stock || '',
+    description: Array.isArray(product.description) ? product.description.join('\n') : (product.description || ''),
+    sizes: Array.isArray(product.sizes) ? product.sizes.map(s => s.label || s).join(', ') : '',
+  });
+  const [thumbnail, setThumbnail] = useState(null);
+  const [images, setImages] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const isSuperAdmin = userRole === 'superadmin';
+
+  const inp = { background:'var(--bg)', border:'1px solid var(--border-mid)', borderRadius:'6px', padding:'10px 12px', color:'var(--text-primary)', fontFamily:'DM Sans', fontSize:'14px', width:'100%', boxSizing:'border-box' };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append('name', form.name);
+      fd.append('category', form.category);
+      fd.append('stock', form.stock);
+      fd.append('description', JSON.stringify(form.description.split('\n').filter(Boolean)));
+      fd.append('sizes', JSON.stringify(form.sizes.split(',').map(s => ({ label: s.trim(), available: true })).filter(s => s.label)));
+      if (isSuperAdmin) { fd.append('price', form.price); fd.append('original_price', form.original_price); }
+      if (thumbnail) fd.append('thumbnail', thumbnail);
+      images.forEach(img => fd.append('images', img));
+      const res = await axiosInstance.put(`/products/${product._id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      toast.success('Product updated!');
+      onSaved(res.data);
+      onClose();
+    } catch (err) { toast.error('Failed to update product'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+      style={{position:'fixed',inset:0,zIndex:1000,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}
+      onClick={onClose}>
+      <motion.div initial={{scale:0.92,y:24}} animate={{scale:1,y:0}} exit={{scale:0.92,y:24}} transition={{duration:0.25}}
+        onClick={e=>e.stopPropagation()}
+        style={{background:'var(--bg-card)',border:'1px solid var(--border-mid)',borderRadius:'var(--radius-lg)',padding:'32px',width:'100%',maxWidth:'600px',maxHeight:'90vh',overflowY:'auto'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'24px'}}>
+          <div>
+            <div style={{fontFamily:'JetBrains Mono',fontSize:'10px',color:'var(--warning)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:'4px'}}>Admin · Edit Product</div>
+            <h2 style={{fontFamily:'Syne',fontWeight:700,fontSize:'22px',color:'var(--text-primary)',margin:0}}>Edit Product</h2>
+          </div>
+          <button onClick={onClose} style={{background:'var(--bg-elevated)',border:'1px solid var(--border-mid)',borderRadius:'6px',color:'var(--text-muted)',width:'32px',height:'32px',cursor:'pointer',fontSize:'18px',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
+        </div>
+        <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:'14px'}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
+            <div><label style={{fontFamily:'JetBrains Mono',fontSize:'10px',color:'var(--text-muted)',textTransform:'uppercase',display:'block',marginBottom:'6px'}}>Name *</label><input style={inp} required value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></div>
+            <div><label style={{fontFamily:'JetBrains Mono',fontSize:'10px',color:'var(--text-muted)',textTransform:'uppercase',display:'block',marginBottom:'6px'}}>Category</label><input style={inp} value={form.category} onChange={e=>setForm({...form,category:e.target.value})} /></div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns: isSuperAdmin ? '1fr 1fr 1fr' : '1fr',gap:'12px'}}>
+            <div><label style={{fontFamily:'JetBrains Mono',fontSize:'10px',color:'var(--text-muted)',textTransform:'uppercase',display:'block',marginBottom:'6px'}}>Stock</label><input type="number" style={inp} value={form.stock} onChange={e=>setForm({...form,stock:e.target.value})} /></div>
+            {isSuperAdmin && (<>
+              <div><label style={{fontFamily:'JetBrains Mono',fontSize:'10px',color:'var(--warning)',textTransform:'uppercase',display:'block',marginBottom:'6px'}}>Price ₹ 🔒</label><input type="number" style={inp} value={form.price} onChange={e=>setForm({...form,price:e.target.value})} /></div>
+              <div><label style={{fontFamily:'JetBrains Mono',fontSize:'10px',color:'var(--warning)',textTransform:'uppercase',display:'block',marginBottom:'6px'}}>Original Price ₹ 🔒</label><input type="number" style={inp} value={form.original_price} onChange={e=>setForm({...form,original_price:e.target.value})} /></div>
+            </>)}
+          </div>
+          <div><label style={{fontFamily:'JetBrains Mono',fontSize:'10px',color:'var(--text-muted)',textTransform:'uppercase',display:'block',marginBottom:'6px'}}>Sizes (comma-separated)</label><input style={inp} placeholder="S, M, L, XL" value={form.sizes} onChange={e=>setForm({...form,sizes:e.target.value})} /></div>
+          <div><label style={{fontFamily:'JetBrains Mono',fontSize:'10px',color:'var(--text-muted)',textTransform:'uppercase',display:'block',marginBottom:'6px'}}>Description (one line per bullet)</label><textarea style={{...inp,height:'80px',resize:'vertical'}} value={form.description} onChange={e=>setForm({...form,description:e.target.value})} /></div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
+            <div><label style={{fontFamily:'JetBrains Mono',fontSize:'10px',color:'var(--text-muted)',textTransform:'uppercase',display:'block',marginBottom:'6px'}}>New Thumbnail</label><input type="file" accept="image/*" onChange={e=>setThumbnail(e.target.files[0])} style={{...inp,padding:'8px'}} />{product.thumbnail && <div style={{marginTop:'4px',fontFamily:'DM Sans',fontSize:'11px',color:'var(--text-muted)'}}>Current: {product.thumbnail.split('/').pop()}</div>}</div>
+            <div><label style={{fontFamily:'JetBrains Mono',fontSize:'10px',color:'var(--text-muted)',textTransform:'uppercase',display:'block',marginBottom:'6px'}}>New Gallery Images</label><input type="file" accept="image/*" multiple onChange={e=>setImages(Array.from(e.target.files))} style={{...inp,padding:'8px'}} />{product.images?.length > 0 && <div style={{marginTop:'4px',fontFamily:'DM Sans',fontSize:'11px',color:'var(--text-muted)'}}>{product.images.length} existing</div>}</div>
+          </div>
+          <div style={{display:'flex',gap:'10px',marginTop:'8px'}}>
+            <button type="button" onClick={onClose} style={{flex:1,padding:'12px',background:'var(--bg-elevated)',border:'1px solid var(--border-mid)',borderRadius:'6px',color:'var(--text-secondary)',fontFamily:'DM Sans',fontSize:'14px',cursor:'pointer'}}>Cancel</button>
+            <button type="submit" disabled={saving} style={{flex:2,padding:'12px',background:'var(--warning)',border:'none',borderRadius:'6px',color:'#000',fontFamily:'DM Sans',fontWeight:600,fontSize:'14px',cursor:saving?'not-allowed':'pointer',opacity:saving?0.7:1}}>{saving?'Saving...':'Save Changes'}</button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
+};
 
 // Mock Data
 const INITIAL_PRODUCTS = [];
@@ -50,13 +134,23 @@ const Silhouette = ({ category }) => {
 };
 
 const Products = () => {
+  const { user } = useAuthStore();
+  const userRole = user?.role || null;
+  const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+  const isSuperAdmin = userRole === 'superadmin';
+
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
   const [sortBy, setSortBy] = useState('Newest First');
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortRef = useRef(null);
-  
+
+  // Admin modal state
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [deleteConfirmProduct, setDeleteConfirmProduct] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
   // Cart State
   const [cartItems, setCartItems] = useState([]);
   const [addedItemIds, setAddedItemIds] = useState({});
@@ -149,6 +243,22 @@ const Products = () => {
     setTimeout(() => {
       setAddedItemIds(prev => ({ ...prev, [product._id]: false }));
     }, 1500);
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!deleteConfirmProduct) return;
+    setDeleting(true);
+    try {
+      await axiosInstance.delete(`/products/${deleteConfirmProduct._id}`);
+      setProducts(prev => prev.filter(p => p._id !== deleteConfirmProduct._id));
+      toast.success('Product deleted');
+      setDeleteConfirmProduct(null);
+    } catch (err) { toast.error('Failed to delete product'); }
+    finally { setDeleting(false); }
+  };
+
+  const handleProductSaved = (updated) => {
+    setProducts(prev => prev.map(p => p._id === updated._id ? updated : p));
   };
 
   const filteredProducts = products
@@ -326,8 +436,27 @@ const Products = () => {
                     {/* Image Area */}
                     <Link to={`/products/${product._id}`} style={{ display: 'block', textDecoration: 'none' }}>
                       <div style={{ height: '220px', background: 'var(--bg-elevated)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        
-                        <Silhouette category={product.category} />
+                        {product.thumbnail ? (
+                          <img src={product.thumbnail.startsWith('http') ? product.thumbnail : `${BACKEND}${product.thumbnail}`} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} onError={e => { e.target.style.display = 'none'; }} />
+                        ) : (
+                          <Silhouette category={product.category} />
+                        )}
+
+                        {/* Admin Overlay Buttons */}
+                        {isAdmin && (
+                          <div onClick={e => e.preventDefault()} style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', gap: '6px', zIndex: 10 }}>
+                            <button onClick={e => { e.preventDefault(); e.stopPropagation(); setEditingProduct(product); }}
+                              style={{ background: 'rgba(245,158,11,0.92)', border: 'none', borderRadius: '6px', padding: '5px 10px', color: '#000', fontFamily: 'JetBrains Mono', fontSize: '10px', fontWeight: 700, cursor: 'pointer', backdropFilter: 'blur(4px)', textTransform: 'uppercase' }}>
+                              ✏ Edit
+                            </button>
+                            {isSuperAdmin && (
+                              <button onClick={e => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmProduct(product); }}
+                                style={{ background: 'rgba(239,68,68,0.92)', border: 'none', borderRadius: '6px', padding: '5px 10px', color: '#fff', fontFamily: 'JetBrains Mono', fontSize: '10px', fontWeight: 700, cursor: 'pointer', backdropFilter: 'blur(4px)', textTransform: 'uppercase' }}>
+                                🗑
+                              </button>
+                            )}
+                          </div>
+                        )}
 
                         {/* Badges */}
                         <div style={{ position: 'absolute', top: '12px', left: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -419,6 +548,32 @@ const Products = () => {
       </main>
 
       <Footer />
+
+      {/* Product Edit Modal */}
+      <AnimatePresence>
+        {editingProduct && (
+          <ProductEditModal product={editingProduct} onClose={() => setEditingProduct(null)} onSaved={handleProductSaved} userRole={userRole} />
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirm */}
+      <AnimatePresence>
+        {deleteConfirmProduct && (
+          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+            style={{position:'fixed',inset:0,zIndex:1000,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
+            <motion.div initial={{scale:0.9}} animate={{scale:1}} exit={{scale:0.9}}
+              style={{background:'var(--bg-card)',border:'1px solid rgba(239,68,68,0.4)',borderRadius:'var(--radius-lg)',padding:'32px',maxWidth:'420px',width:'100%',textAlign:'center'}}>
+              <div style={{fontSize:'40px',marginBottom:'16px'}}>⚠️</div>
+              <h3 style={{fontFamily:'Syne',fontWeight:700,fontSize:'20px',color:'var(--text-primary)',marginBottom:'8px'}}>Delete Product?</h3>
+              <p style={{fontFamily:'DM Sans',fontSize:'14px',color:'var(--text-secondary)',marginBottom:'24px'}}><strong style={{color:'var(--text-primary)'}}>{deleteConfirmProduct.name}</strong> will be permanently removed.</p>
+              <div style={{display:'flex',gap:'10px'}}>
+                <button onClick={() => setDeleteConfirmProduct(null)} style={{flex:1,padding:'12px',background:'var(--bg-elevated)',border:'1px solid var(--border-mid)',borderRadius:'6px',color:'var(--text-secondary)',fontFamily:'DM Sans',fontSize:'14px',cursor:'pointer'}}>Cancel</button>
+                <button onClick={handleDeleteProduct} disabled={deleting} style={{flex:1,padding:'12px',background:'var(--error)',border:'none',borderRadius:'6px',color:'#fff',fontFamily:'DM Sans',fontWeight:600,fontSize:'14px',cursor:deleting?'not-allowed':'pointer',opacity:deleting?0.7:1}}>{deleting?'Deleting...':'Delete'}</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <style dangerouslySetInnerHTML={{__html: `
         .no-scrollbar::-webkit-scrollbar { display: none; }

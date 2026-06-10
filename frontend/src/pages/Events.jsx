@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MetalButton, LiquidButton } from '../components/ui/Buttons';
@@ -6,6 +6,8 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import axiosInstance from '../api/axios';
 import { io } from 'socket.io-client';
+import useAuthStore from '../store/authStore';
+import toast from 'react-hot-toast';
 
 // SVGs
 const SearchIcon = () => (
@@ -77,9 +79,147 @@ const ChevronDownIcon = () => (
 
 const MOCK_EVENTS = [];
 
-const EventCard = ({ event, index }) => {
+// ── Edit Modal ────────────────────────────────────────────────────────────────
+const EventEditModal = ({ event, onClose, onSaved, userRole }) => {
+  const [form, setForm] = useState({
+    name: event.name || '',
+    type: event.type || '',
+    date: event.date ? event.date.split('T')[0] : '',
+    venue: event.venue || '',
+    capacity: event.capacity || '',
+    price: event.price || '',
+    status: event.status || 'OPEN',
+    tagline: event.tagline || '',
+    description: event.description || '',
+    prize_pool: event.prize_pool || '',
+    is_featured: event.is_featured || false,
+  });
+  const [thumbnail, setThumbnail] = useState(null);
+  const [images, setImages] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+      if (thumbnail) fd.append('thumbnail', thumbnail);
+      images.forEach(img => fd.append('images', img));
+
+      const res = await axiosInstance.put(`/event/${event._id}`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success('Event updated!');
+      onSaved(res.data);
+      onClose();
+    } catch (err) {
+      toast.error('Failed to update event');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inp = {
+    background: 'var(--bg)',
+    border: '1px solid var(--border-mid)',
+    borderRadius: '6px',
+    padding: '10px 12px',
+    color: 'var(--text-primary)',
+    fontFamily: 'DM Sans',
+    fontSize: '14px',
+    width: '100%',
+    boxSizing: 'border-box',
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.92, y: 24 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, y: 24 }}
+        transition={{ duration: 0.25 }}
+        onClick={e => e.stopPropagation()}
+        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '32px', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <div>
+            <div style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--warning)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Admin · Edit Event</div>
+            <h2 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '22px', color: 'var(--text-primary)', margin: 0 }}>Edit Event</h2>
+          </div>
+          <button onClick={onClose} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: '6px', color: 'var(--text-muted)', width: '32px', height: '32px', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div><label style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Event Name *</label>
+              <input style={inp} required value={form.name} onChange={e => setForm({...form, name: e.target.value})} /></div>
+            <div><label style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Type / Category</label>
+              <input style={inp} placeholder="e.g. Hackathon" value={form.type} onChange={e => setForm({...form, type: e.target.value})} /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div><label style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Date</label>
+              <input type="date" style={inp} value={form.date} onChange={e => setForm({...form, date: e.target.value})} /></div>
+            <div><label style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Venue</label>
+              <input style={inp} value={form.venue} onChange={e => setForm({...form, venue: e.target.value})} /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: userRole === 'superadmin' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '12px' }}>
+            <div><label style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Capacity</label>
+              <input type="number" style={inp} value={form.capacity} onChange={e => setForm({...form, capacity: e.target.value})} /></div>
+            {userRole === 'superadmin' && (
+              <div><label style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--warning)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Price ₹ 🔒 Superadmin</label>
+                <input type="number" style={inp} value={form.price} onChange={e => setForm({...form, price: e.target.value})} /></div>
+            )}
+            <div><label style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Status</label>
+              <select style={inp} value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
+                <option>OPEN</option><option>CLOSING SOON</option><option>FULL</option><option>COMPLETED</option>
+              </select></div>
+          </div>
+          <div><label style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Tagline</label>
+            <input style={inp} value={form.tagline} onChange={e => setForm({...form, tagline: e.target.value})} /></div>
+          <div><label style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Prize Pool</label>
+            <input style={inp} placeholder="e.g. ₹50,000" value={form.prize_pool} onChange={e => setForm({...form, prize_pool: e.target.value})} /></div>
+          <div><label style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Description</label>
+            <textarea style={{...inp, height: '80px', resize: 'vertical'}} value={form.description} onChange={e => setForm({...form, description: e.target.value})} /></div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>New Thumbnail</label>
+              <input type="file" accept="image/*" onChange={e => setThumbnail(e.target.files[0])} style={{ ...inp, padding: '8px' }} />
+              {event.thumbnail && <div style={{ marginTop: '6px', fontFamily: 'DM Sans', fontSize: '11px', color: 'var(--text-muted)' }}>Current: {event.thumbnail.split('/').pop()}</div>}
+            </div>
+            <div>
+              <label style={{ fontFamily: 'JetBrains Mono', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>New Gallery Images</label>
+              <input type="file" accept="image/*" multiple onChange={e => setImages(Array.from(e.target.files))} style={{ ...inp, padding: '8px' }} />
+              {event.images?.length > 0 && <div style={{ marginTop: '6px', fontFamily: 'DM Sans', fontSize: '11px', color: 'var(--text-muted)' }}>{event.images.length} existing image(s)</div>}
+            </div>
+          </div>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-secondary)' }}>
+            <input type="checkbox" checked={form.is_featured} onChange={e => setForm({...form, is_featured: e.target.checked})} />
+            Mark as Featured Event
+          </label>
+
+          <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '12px', background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: '6px', color: 'var(--text-secondary)', fontFamily: 'DM Sans', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={saving} style={{ flex: 2, padding: '12px', background: 'var(--warning)', border: 'none', borderRadius: '6px', color: '#000', fontFamily: 'DM Sans', fontWeight: 600, fontSize: '14px', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// ── EventCard ─────────────────────────────────────────────────────────────────
+const EventCard = ({ event, index, userRole, onEdit, onDelete }) => {
   const isFull = event.status === 'FULL';
   const isEnded = event.status === 'COMPLETED';
+  const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+  const isSuperAdmin = userRole === 'superadmin';
 
   let statusBg = 'var(--bg-elevated)';
   let statusBorder = 'var(--border-mid)';
@@ -99,6 +239,9 @@ const EventCard = ({ event, index }) => {
     statusColor = 'var(--error)';
   }
 
+  const BACKEND = 'http://localhost:3000';
+  const thumbUrl = event.thumbnail ? (event.thumbnail.startsWith('http') ? event.thumbnail : `${BACKEND}${event.thumbnail}`) : null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -109,112 +252,149 @@ const EventCard = ({ event, index }) => {
         background: 'var(--bg-card)',
         border: '1px solid var(--border-mid)',
         borderRadius: 'var(--radius-lg)',
-        padding: '24px',
         overflow: 'hidden',
         cursor: 'pointer',
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        position: 'relative',
       }}
       className="event-card-hover"
       onClick={() => window.location.href = `/events/${event._id || event.id}`}
     >
-      <Link to={`/events/${event._id || event.id}`} style={{ display: 'none' }} />
-
-      {/* Row 1 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{
-          background: 'var(--grad-subtle)',
-          border: '1px solid var(--border-mid)',
-          fontFamily: 'JetBrains Mono',
-          fontSize: '10px',
-          color: 'var(--orchid)',
-          padding: '3px 8px',
-          borderRadius: 'var(--radius-sm)'
-        }}>
-          {event.type}
+      {/* Thumbnail */}
+      {thumbUrl ? (
+        <div style={{ height: '160px', overflow: 'hidden', position: 'relative' }}>
+          <img src={thumbUrl} alt={event.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={e => { e.target.style.display = 'none'; e.target.parentElement.style.background = 'var(--bg-elevated)'; }} />
         </div>
-        <motion.div
-          key={event.status}
-          initial={{ scale: 0.85, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.25 }}
-          style={{
-            background: statusBg,
-            border: `1px solid ${statusBorder}`,
+      ) : (
+        <div style={{ height: '6px', background: 'var(--grad-primary)' }} />
+      )}
+
+      {/* Admin Actions Overlay */}
+      {isAdmin && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{ position: 'absolute', top: thumbUrl ? '8px' : '12px', right: '8px', display: 'flex', gap: '6px', zIndex: 10 }}
+        >
+          <button
+            onClick={e => { e.stopPropagation(); onEdit(event); }}
+            title="Edit Event"
+            style={{ background: 'rgba(245,158,11,0.9)', border: 'none', borderRadius: '6px', padding: '5px 10px', color: '#000', fontFamily: 'JetBrains Mono', fontSize: '10px', fontWeight: 700, cursor: 'pointer', backdropFilter: 'blur(4px)', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+          >
+            ✏ Edit
+          </button>
+          {isSuperAdmin && (
+            <button
+              onClick={e => { e.stopPropagation(); onDelete(event); }}
+              title="Delete Event"
+              style={{ background: 'rgba(239,68,68,0.9)', border: 'none', borderRadius: '6px', padding: '5px 10px', color: '#fff', fontFamily: 'JetBrains Mono', fontSize: '10px', fontWeight: 700, cursor: 'pointer', backdropFilter: 'blur(4px)', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+            >
+              🗑
+            </button>
+          )}
+        </div>
+      )}
+
+      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+        <Link to={`/events/${event._id || event.id}`} style={{ display: 'none' }} />
+
+        {/* Row 1 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{
+            background: 'var(--grad-subtle)',
+            border: '1px solid var(--border-mid)',
             fontFamily: 'JetBrains Mono',
-            fontSize: '9px',
-            color: statusColor,
-            textTransform: 'uppercase',
+            fontSize: '10px',
+            color: 'var(--orchid)',
             padding: '3px 8px',
             borderRadius: 'var(--radius-sm)'
-          }}
-        >
-          {event.status}
-        </motion.div>
-      </div>
-
-      {/* Name */}
-      <h3 style={{
-        fontFamily: 'Syne', fontWeight: 700, fontSize: '18px', color: 'var(--text-primary)',
-        letterSpacing: '-0.01em', lineHeight: 1.3, marginTop: '14px', marginBottom: '0',
-        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-      }}>
-        {event.name}
-      </h3>
-
-      {/* Tagline */}
-      <div style={{
-        fontFamily: 'DM Sans', fontWeight: 400, fontSize: '13px', color: 'var(--text-secondary)',
-        fontStyle: 'italic', marginTop: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-      }}>
-        {event.tagline}
-      </div>
-
-      {/* Meta Row */}
-      <div style={{ marginTop: '14px', flexGrow: 1 }}>
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '4px' }}>
-          <CalendarIcon size={14} color="var(--text-muted)" />
-          <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>
-            {event.date ? (isNaN(new Date(event.date).getTime()) ? event.date : new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) : 'TBA'}
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <LocationIcon size={14} color="var(--text-muted)" />
-          <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>{event.venue}</span>
-        </div>
-        {event.prize_pool && (
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '10px' }}>
-            <TrophyIcon size={14} color="var(--orchid)" />
-            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--orchid)' }}>{event.prize_pool} prize pool</span>
+          }}>
+            {event.type}
           </div>
-        )}
-      </div>
+          <motion.div
+            key={event.status}
+            initial={{ scale: 0.85, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.25 }}
+            style={{
+              background: statusBg,
+              border: `1px solid ${statusBorder}`,
+              fontFamily: 'JetBrains Mono',
+              fontSize: '9px',
+              color: statusColor,
+              textTransform: 'uppercase',
+              padding: '3px 8px',
+              borderRadius: 'var(--radius-sm)'
+            }}
+          >
+            {event.status}
+          </motion.div>
+        </div>
 
-      <div style={{ height: '1px', background: 'var(--border)', margin: '16px 0' }} />
+        {/* Name */}
+        <h3 style={{
+          fontFamily: 'Syne', fontWeight: 700, fontSize: '18px', color: 'var(--text-primary)',
+          letterSpacing: '-0.01em', lineHeight: 1.3, marginTop: '14px', marginBottom: '0',
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+        }}>
+          {event.name}
+        </h3>
 
-      {/* Bottom Row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          {isFull ? (
-            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--error)' }}>Sold Out</span>
-          ) : isEnded ? (
-            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-muted)' }}>Event ended</span>
-          ) : (
-            <>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--orchid)' }}>{event.registered}</span>
-              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-muted)' }}> / {event.capacity} spots</span>
-            </>
+        {/* Tagline */}
+        <div style={{
+          fontFamily: 'DM Sans', fontWeight: 400, fontSize: '13px', color: 'var(--text-secondary)',
+          fontStyle: 'italic', marginTop: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+        }}>
+          {event.tagline}
+        </div>
+
+        {/* Meta Row */}
+        <div style={{ marginTop: '14px', flexGrow: 1 }}>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '4px' }}>
+            <CalendarIcon size={14} color="var(--text-muted)" />
+            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>
+              {event.date ? (isNaN(new Date(event.date).getTime()) ? event.date : new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) : 'TBA'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <LocationIcon size={14} color="var(--text-muted)" />
+            <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px', color: 'var(--text-muted)' }}>{event.venue}</span>
+          </div>
+          {event.prize_pool && (
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '10px' }}>
+              <TrophyIcon size={14} color="var(--orchid)" />
+              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--orchid)' }}>{event.prize_pool} prize pool</span>
+            </div>
           )}
         </div>
-        <div>
-          {isFull ? (
-            <button disabled style={{ opacity: 0.5, cursor: 'not-allowed', background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)', padding: '6px 12px', borderRadius: '4px', fontFamily: 'DM Sans', fontSize: '13px' }} onClick={(e) => e.stopPropagation()}>Full</button>
-          ) : isEnded ? (
-            <button disabled style={{ opacity: 0.5, cursor: 'not-allowed', background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)', padding: '6px 12px', borderRadius: '4px', fontFamily: 'DM Sans', fontSize: '13px' }} onClick={(e) => e.stopPropagation()}>Ended</button>
-          ) : (
-            <MetalButton variant="default" size="sm" onClick={(e) => { e.stopPropagation(); window.location.href = `/events/${event._id || event.id}`; }}>View Details</MetalButton>
-          )}
+
+        <div style={{ height: '1px', background: 'var(--border)', margin: '16px 0' }} />
+
+        {/* Bottom Row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            {isFull ? (
+              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--error)' }}>Sold Out</span>
+            ) : isEnded ? (
+              <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-muted)' }}>Event ended</span>
+            ) : (
+              <>
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--orchid)' }}>{event.registered}</span>
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-muted)' }}> / {event.capacity} spots</span>
+              </>
+            )}
+          </div>
+          <div>
+            {isFull ? (
+              <button disabled style={{ opacity: 0.5, cursor: 'not-allowed', background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)', padding: '6px 12px', borderRadius: '4px', fontFamily: 'DM Sans', fontSize: '13px' }} onClick={(e) => e.stopPropagation()}>Full</button>
+            ) : isEnded ? (
+              <button disabled style={{ opacity: 0.5, cursor: 'not-allowed', background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)', padding: '6px 12px', borderRadius: '4px', fontFamily: 'DM Sans', fontSize: '13px' }} onClick={(e) => e.stopPropagation()}>Ended</button>
+            ) : (
+              <MetalButton variant="default" size="sm" onClick={(e) => { e.stopPropagation(); window.location.href = `/events/${event._id || event.id}`; }}>View Details</MetalButton>
+            )}
+          </div>
         </div>
       </div>
     </motion.div>
@@ -225,10 +405,18 @@ const Events = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialPage = parseInt(searchParams.get('page') || '1', 10);
 
+  const { user } = useAuthStore();
+  const userRole = user?.role || null;
+
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+
+  // Admin modal state
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [deleteConfirmEvent, setDeleteConfirmEvent] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [activeFilter, setActiveFilter] = useState('All Events');
   const [searchQuery, setSearchQuery] = useState('');
@@ -240,6 +428,28 @@ const Events = () => {
 
   const categories = ["All Events", "Hackathon", "Case Study", "Startup Pitch", "Workshop", "Panel Talk"];
   const sortOptions = ["Date: Soonest", "Date: Latest", "Spots: Low to High", "Prize: High to Low"];
+
+  // Admin handlers
+  const handleEventSaved = (updatedEvent) => {
+    setEvents(prev => prev.map(e => (e._id === updatedEvent._id ? updatedEvent : e)));
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirmEvent) return;
+    setDeleting(true);
+    try {
+      await axiosInstance.delete(`/event/${deleteConfirmEvent._id}`);
+      setEvents(prev => prev.filter(e => e._id !== deleteConfirmEvent._id));
+      toast.success('Event deleted');
+      setDeleteConfirmEvent(null);
+    } catch (err) {
+      toast.error('Failed to delete event');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+
 
   // Fetch logic
   useEffect(() => {
@@ -743,7 +953,14 @@ const Events = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
                 {currentGridEvents.map((evt, idx) => (
-                  <EventCard key={evt._id || evt.id || idx} event={evt} index={idx} />
+                  <EventCard
+                    key={evt._id || evt.id || idx}
+                    event={evt}
+                    index={idx}
+                    userRole={userRole}
+                    onEdit={setEditingEvent}
+                    onDelete={setDeleteConfirmEvent}
+                  />
                 ))}
               </div>
 
@@ -807,6 +1024,45 @@ const Events = () => {
         </div>
       </main>
       <Footer />
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {editingEvent && (
+          <EventEditModal
+            event={editingEvent}
+            onClose={() => setEditingEvent(null)}
+            onSaved={handleEventSaved}
+            userRole={userRole}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirm */}
+      <AnimatePresence>
+        {deleteConfirmEvent && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          >
+            <motion.div
+              initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+              style={{ background: 'var(--bg-card)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 'var(--radius-lg)', padding: '32px', maxWidth: '420px', width: '100%', textAlign: 'center' }}
+            >
+              <div style={{ fontSize: '40px', marginBottom: '16px' }}>⚠️</div>
+              <h3 style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: '20px', color: 'var(--text-primary)', marginBottom: '8px' }}>Delete Event?</h3>
+              <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+                <strong style={{ color: 'var(--text-primary)' }}>{deleteConfirmEvent.name}</strong> will be permanently removed. This cannot be undone.
+              </p>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => setDeleteConfirmEvent(null)} style={{ flex: 1, padding: '12px', background: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: '6px', color: 'var(--text-secondary)', fontFamily: 'DM Sans', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={handleDelete} disabled={deleting} style={{ flex: 1, padding: '12px', background: 'var(--error)', border: 'none', borderRadius: '6px', color: '#fff', fontFamily: 'DM Sans', fontWeight: 600, fontSize: '14px', cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1 }}>
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

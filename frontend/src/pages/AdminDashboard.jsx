@@ -73,10 +73,12 @@ const AdminDashboard = () => {
       console.log('[AdminDashboard] Fetching admin data...');
       try {
         setLoading(true);
-        const [statsRes, usersRes, ordersRes] = await Promise.all([
+        const [statsRes, usersRes, ordersRes, eventsRes, productsRes] = await Promise.all([
            axiosInstance.get('/admin/stats').catch((err) => { console.error('[AdminDashboard] /admin/stats failed:', err); return { data: null }; }),
            axiosInstance.get('/admin/users').catch((err) => { console.error('[AdminDashboard] /admin/users failed:', err); return { data: null }; }),
-           axiosInstance.get('/admin/orders').catch((err) => { console.error('[AdminDashboard] /admin/orders failed:', err); return { data: null }; })
+           axiosInstance.get('/admin/orders').catch((err) => { console.error('[AdminDashboard] /admin/orders failed:', err); return { data: null }; }),
+           axiosInstance.get('/events').catch((err) => { console.error('[AdminDashboard] /events failed:', err); return { data: null }; }),
+           axiosInstance.get('/products').catch((err) => { console.error('[AdminDashboard] /products failed:', err); return { data: null }; })
         ]);
         
         console.log('[AdminDashboard] Data received:', { stats: statsRes.data, users: usersRes.data, orders: ordersRes.data });
@@ -84,6 +86,8 @@ const AdminDashboard = () => {
         if (statsRes.data) setStats(prev => ({...prev, ...statsRes.data}));
         if (usersRes.data) setUsers(usersRes.data);
         if (ordersRes.data) setOrders(ordersRes.data);
+        if (eventsRes.data) setEvents(eventsRes.data);
+        if (productsRes.data) setProducts(productsRes.data);
       } catch (error) {
         console.error('[AdminDashboard] Unexpected error fetching admin data:', error);
       } finally {
@@ -94,7 +98,12 @@ const AdminDashboard = () => {
   }, []);
 
   // Modals & UI States
-  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null); // { type, item }
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [editingStockId, setEditingStockId] = useState(null);
   const [newStockValue, setNewStockValue] = useState('');
 
@@ -115,6 +124,58 @@ const AdminDashboard = () => {
   }, []);
 
   // Handlers
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmTarget) return;
+    setIsDeleting(true);
+    try {
+      if (deleteConfirmTarget.type === 'event') {
+        await axiosInstance.delete(`/events/${deleteConfirmTarget.item._id}`);
+        setEvents(prev => prev.filter(e => e._id !== deleteConfirmTarget.item._id));
+      } else {
+        await axiosInstance.delete(`/products/${deleteConfirmTarget.item._id}`);
+        setProducts(prev => prev.filter(p => p._id !== deleteConfirmTarget.item._id));
+      }
+      toast.success(`${deleteConfirmTarget.type === 'event' ? 'Event' : 'Product'} deleted`);
+    } catch (err) {
+      toast.error('Failed to delete item');
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirmTarget(null);
+    }
+  };
+
+  const handleEditEventSave = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const formData = new FormData(e.target);
+      const { data } = await axiosInstance.put(`/events/${editingEvent._id}`, formData);
+      setEvents(prev => prev.map(ev => ev._id === editingEvent._id ? data : ev));
+      toast.success('Event updated');
+      setEditingEvent(null);
+    } catch (err) {
+      toast.error('Failed to update event');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEditProductSave = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const formData = new FormData(e.target);
+      const { data } = await axiosInstance.put(`/products/${editingProduct._id}`, formData);
+      setProducts(prev => prev.map(p => p._id === editingProduct._id ? data : p));
+      toast.success('Product updated');
+      setEditingProduct(null);
+    } catch (err) {
+      toast.error('Failed to update product');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleRefresh = () => {
     setLoading(true);
     setTimeout(() => {
@@ -133,6 +194,29 @@ const AdminDashboard = () => {
   const handleOrderStatusUpdate = (id, newStatus) => {
     setOrders(prev => prev.map(o => o._id === id ? { ...o, status: newStatus } : o));
     toast.success('Order status updated');
+  };
+
+  const exportToCSV = (data, filename) => {
+    if (!data || !data.length) {
+      toast.error('No data to export');
+      return;
+    }
+    const headers = Object.keys(data[0]).join(',');
+    const rows = data.map(obj => 
+      Object.values(obj).map(val => 
+        `"${String(val).replace(/"/g, '""')}"`
+      ).join(',')
+    );
+    const csvContent = [headers, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const tabs = [
@@ -321,7 +405,23 @@ const AdminDashboard = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ fontFamily: '"Syne", sans-serif', fontWeight: 700, fontSize: '24px' }}>Manage Events</h3>
-        <MetalButton onClick={() => setIsEventModalOpen(true)}>Create New Event</MetalButton>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <MetalButton onClick={() => {
+            const exportData = events.map(e => ({
+              ID: e._id,
+              Name: e.name || e.title,
+              Type: e.type || e.category,
+              Date: e.date,
+              Capacity: e.capacity,
+              Registered: e.registrations?.length || e.registered || 0,
+              Status: e.status || 'OPEN'
+            }));
+            exportToCSV(exportData, 'events_export');
+          }}>Export CSV</MetalButton>
+          {user?.role === 'superadmin' && (
+            <MetalButton onClick={() => window.location.href = '/superadmin'}>Go to SuperAdmin to Add</MetalButton>
+          )}
+        </div>
       </div>
 
       <div style={{ overflowX: 'auto', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)' }}>
@@ -336,17 +436,18 @@ const AdminDashboard = () => {
           <tbody>
             {events.map((ev) => (
               <tr key={ev._id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '16px', fontFamily: '"DM Sans", sans-serif', fontSize: '14px', color: 'var(--text-primary)' }}>{ev.name}</td>
-                <td style={{ padding: '16px', fontFamily: '"JetBrains Mono", monospace', fontSize: '12px', color: 'var(--text-secondary)' }}>{ev.type}</td>
+                <td style={{ padding: '16px', fontFamily: '"DM Sans", sans-serif', fontSize: '14px', color: 'var(--text-primary)' }}>{ev.name || ev.title}</td>
+                <td style={{ padding: '16px', fontFamily: '"JetBrains Mono", monospace', fontSize: '12px', color: 'var(--text-secondary)' }}>{ev.type || ev.category}</td>
                 <td style={{ padding: '16px', fontFamily: '"DM Sans", sans-serif', fontSize: '14px', color: 'var(--text-secondary)' }}>{ev.date}</td>
                 <td style={{ padding: '16px', fontFamily: '"JetBrains Mono", monospace', fontSize: '13px', color: 'var(--text-primary)' }}>{ev.capacity}</td>
-                <td style={{ padding: '16px', fontFamily: '"JetBrains Mono", monospace', fontSize: '13px', color: 'var(--orchid)' }}>{ev.registered}</td>
-                <td style={{ padding: '16px' }}><AdminStatusBadge status={ev.status} /></td>
+                <td style={{ padding: '16px', fontFamily: '"JetBrains Mono", monospace', fontSize: '13px', color: 'var(--orchid)' }}>{ev.registrations?.length || ev.registered || 0}</td>
+                <td style={{ padding: '16px' }}><AdminStatusBadge status={ev.status || 'OPEN'} /></td>
                 <td style={{ padding: '16px', display: 'flex', gap: '8px' }}>
-                  <button className="icon-btn"><Edit2 size={16} /></button>
-                  <button className="icon-btn" onClick={() => window.open(`/events/${ev._id}`, '_blank')}><Eye size={16} /></button>
-                  <button className="icon-btn"><Megaphone size={16} /></button>
-                  <button className="icon-btn delete"><Trash2 size={16} /></button>
+                  <button className="icon-btn" onClick={() => setEditingEvent(ev)}><Edit2 size={16} /></button>
+                  <button className="icon-btn" onClick={() => window.open(`/events/${ev._id || ev.id}`, '_blank')}><Eye size={16} /></button>
+                  {user?.role === 'superadmin' && (
+                    <button className="icon-btn delete" onClick={() => setDeleteConfirmTarget({ type: 'event', item: ev })}><Trash2 size={16} /></button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -360,7 +461,9 @@ const AdminDashboard = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ fontFamily: '"Syne", sans-serif', fontWeight: 700, fontSize: '24px' }}>Manage Products</h3>
-        <MetalButton>Add Product</MetalButton>
+        {user?.role === 'superadmin' && (
+          <MetalButton onClick={() => window.location.href = '/superadmin'}>Go to SuperAdmin to Add</MetalButton>
+        )}
       </div>
 
       <div style={{ overflowX: 'auto', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)' }}>
@@ -375,7 +478,7 @@ const AdminDashboard = () => {
           <tbody>
             {products.map((p) => (
               <tr key={p._id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '16px', fontFamily: '"DM Sans", sans-serif', fontSize: '14px', color: 'var(--text-primary)' }}>{p.name}</td>
+                <td style={{ padding: '16px', fontFamily: '"DM Sans", sans-serif', fontSize: '14px', color: 'var(--text-primary)' }}>{p.name || p.title}</td>
                 <td style={{ padding: '16px', fontFamily: '"DM Sans", sans-serif', fontSize: '13px', color: 'var(--text-secondary)' }}>{p.category}</td>
                 <td style={{ padding: '16px', fontFamily: '"JetBrains Mono", monospace', fontSize: '13px', color: 'var(--text-primary)' }}>₹{p.price}</td>
                 
@@ -400,10 +503,12 @@ const AdminDashboard = () => {
                   )}
                 </td>
 
-                <td style={{ padding: '16px' }}><AdminStatusBadge status={p.status} /></td>
+                <td style={{ padding: '16px' }}><AdminStatusBadge status={p.status || (p.stock > 0 ? 'ACTIVE' : 'SOLD OUT')} /></td>
                 <td style={{ padding: '16px', display: 'flex', gap: '8px' }}>
-                  <button className="icon-btn"><Edit2 size={16} /></button>
-                  <button className="icon-btn delete"><Trash2 size={16} /></button>
+                  <button className="icon-btn" onClick={() => setEditingProduct(p)}><Edit2 size={16} /></button>
+                  {user?.role === 'superadmin' && (
+                    <button className="icon-btn delete" onClick={() => setDeleteConfirmTarget({ type: 'product', item: p })}><Trash2 size={16} /></button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -417,12 +522,25 @@ const AdminDashboard = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <h3 style={{ fontFamily: '"Syne", sans-serif', fontWeight: 700, fontSize: '24px' }}>All Orders</h3>
-        <div style={{ position: 'relative' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input type="text" placeholder="Search ID or email..." style={{
-            padding: '10px 16px 10px 36px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-mid)',
-            background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontFamily: '"DM Sans", sans-serif', fontSize: '14px', outline: 'none'
-          }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <MetalButton onClick={() => {
+            const exportData = orders.map(o => ({
+              ID: o._id,
+              CustomerName: o.user?.name || 'Guest',
+              CustomerEmail: o.user?.email || '',
+              Amount: o.amount ? (o.amount / 100) : 0,
+              Status: o.status,
+              Date: new Date(o.createdAt).toLocaleDateString()
+            }));
+            exportToCSV(exportData, 'orders_export');
+          }}>Export CSV</MetalButton>
+          <div style={{ position: 'relative' }}>
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input type="text" placeholder="Search ID or email..." style={{
+              padding: '10px 16px 10px 36px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-mid)',
+              background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontFamily: '"DM Sans", sans-serif', fontSize: '14px', outline: 'none'
+            }} />
+          </div>
         </div>
       </div>
 
@@ -436,38 +554,44 @@ const AdminDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {orders.map((o) => (
+            {orders.map((o) => {
+              const customerName = o.user?.name || 'Guest';
+              const customerEmail = o.user?.email || '';
+              const firstItem = o.items?.[0] || {};
+              const productStr = firstItem.name || 'Unknown Product';
+              const qty = o.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 0;
+              const moreText = o.items?.length > 1 ? ` + ${o.items.length - 1} more` : '';
+              return (
               <tr key={o._id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '16px', fontFamily: '"JetBrains Mono", monospace', fontSize: '13px', color: 'var(--orchid)' }}>{o._id}</td>
+                <td style={{ padding: '16px', fontFamily: '"JetBrains Mono", monospace', fontSize: '13px', color: 'var(--orchid)' }}>{o._id.slice(-6).toUpperCase()}</td>
                 <td style={{ padding: '16px', fontFamily: '"DM Sans", sans-serif', fontSize: '14px', color: 'var(--text-primary)' }}>
-                  <div>{o.customer}</div><div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{o.email}</div>
+                  <div>{customerName}</div><div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{customerEmail}</div>
                 </td>
-                <td style={{ padding: '16px', fontFamily: '"DM Sans", sans-serif', fontSize: '14px', color: 'var(--text-secondary)' }}>{o.product}</td>
-                <td style={{ padding: '16px', fontFamily: '"JetBrains Mono", monospace', fontSize: '13px', color: 'var(--text-primary)' }}>{o.qty}</td>
-                <td style={{ padding: '16px', fontFamily: '"JetBrains Mono", monospace', fontSize: '13px', color: 'var(--text-primary)' }}>₹{o.amount}</td>
+                <td style={{ padding: '16px', fontFamily: '"DM Sans", sans-serif', fontSize: '14px', color: 'var(--text-secondary)' }}>{productStr}{moreText}</td>
+                <td style={{ padding: '16px', fontFamily: '"JetBrains Mono", monospace', fontSize: '13px', color: 'var(--text-primary)' }}>{qty}</td>
+                <td style={{ padding: '16px', fontFamily: '"JetBrains Mono", monospace', fontSize: '13px', color: 'var(--text-primary)' }}>₹{o.amount ? (o.amount / 100).toLocaleString() : 0}</td>
                 
                 <td style={{ padding: '16px' }}>
                   <div style={{ position: 'relative', display: 'inline-block' }} className="status-dropdown">
                     <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <AdminStatusBadge status={o.status} /> <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />
+                      <AdminStatusBadge status={o.status?.toUpperCase() || 'PENDING'} /> <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />
                     </div>
                     {/* Simplified inline dropdown mock */}
                     <select 
-                      value={o.status} 
+                      value={o.status || 'pending'} 
                       onChange={(e) => handleOrderStatusUpdate(o._id, e.target.value)}
                       style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
                     >
-                      <option value="PROCESSING">Processing</option>
-                      <option value="SHIPPED">Shipped</option>
-                      <option value="DELIVERED">Delivered</option>
-                      <option value="CANCELLED">Cancelled</option>
+                      <option value="pending">Pending</option>
+                      <option value="paid">Paid</option>
+                      <option value="failed">Failed</option>
                     </select>
                   </div>
                 </td>
 
-                <td style={{ padding: '16px', fontFamily: '"DM Sans", sans-serif', fontSize: '13px', color: 'var(--text-muted)' }}>{o.date}</td>
+                <td style={{ padding: '16px', fontFamily: '"DM Sans", sans-serif', fontSize: '13px', color: 'var(--text-muted)' }}>{new Date(o.createdAt).toLocaleDateString()}</td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>
@@ -641,36 +765,63 @@ const AdminDashboard = () => {
 
       </div>
 
-      {/* CREATE EVENT MODAL (Simplified Mock) */}
+      {/* Modals */}
       <AnimatePresence>
-        {isEventModalOpen && (
-          <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
-            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-          }}>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              style={{
-                backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-xl)',
-                width: '100%', maxWidth: '560px', padding: '40px', maxHeight: '90vh', overflowY: 'auto', position: 'relative'
-              }}
-            >
-              <button onClick={() => setIsEventModalOpen(false)} style={{ position: 'absolute', top: '24px', right: '24px', color: 'var(--text-muted)' }}><X size={20} /></button>
-              <h2 style={{ fontFamily: '"Syne", sans-serif', fontWeight: 700, fontSize: '24px', marginBottom: '24px' }}>Create New Event</h2>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <input type="text" placeholder="Event Name" style={{ width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)', outline: 'none' }} />
-                <textarea placeholder="Description" style={{ width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)', outline: 'none', minHeight: '100px' }} />
-                <div style={{ display: 'flex', gap: '16px' }}>
-                  <input type="date" style={{ flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)', outline: 'none' }} />
-                  <input type="date" style={{ flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)', outline: 'none' }} />
-                </div>
-                <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                  <MetalButton style={{ flex: 1 }} onClick={() => setIsEventModalOpen(false)}>Cancel</MetalButton>
-                  <MetalButton primary style={{ flex: 1 }} onClick={() => { setIsEventModalOpen(false); toast.success('Event created successfully'); }}>Create Event</MetalButton>
-                </div>
+        {deleteConfirmTarget && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-lg)', padding: '32px', maxWidth: '400px', width: '100%', textAlign: 'center' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--error)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                <Trash2 size={32} />
               </div>
+              <h3 style={{ fontFamily: 'Syne', fontSize: '20px', fontWeight: 700, marginBottom: '12px', color: 'var(--text-primary)' }}>Delete {deleteConfirmTarget.type === 'event' ? 'Event' : 'Product'}?</h3>
+              <p style={{ fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-muted)', marginBottom: '32px' }}>
+                Are you sure you want to delete <strong>{deleteConfirmTarget.item.name || deleteConfirmTarget.item.title}</strong>? This action cannot be undone.
+              </p>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={() => setDeleteConfirmTarget(null)} style={{ flex: 1, padding: '12px', background: 'transparent', border: '1px solid var(--border-mid)', borderRadius: '6px', color: 'var(--text-primary)', fontFamily: 'DM Sans', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={handleDeleteConfirm} disabled={isDeleting} style={{ flex: 1, padding: '12px', background: 'var(--error)', border: 'none', borderRadius: '6px', color: '#fff', fontFamily: 'DM Sans', fontWeight: 600, fontSize: '14px', cursor: isDeleting ? 'not-allowed' : 'pointer', opacity: isDeleting ? 0.7 : 1 }}>{isDeleting ? 'Deleting...' : 'Delete'}</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {editingEvent && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-xl)', width: '100%', maxWidth: '600px', padding: '40px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
+              <button onClick={() => setEditingEvent(null)} style={{ position: 'absolute', top: '24px', right: '24px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+              <h2 style={{ fontFamily: '"Syne", sans-serif', fontWeight: 700, fontSize: '24px', marginBottom: '24px' }}>Edit Event</h2>
+              <form onSubmit={handleEditEventSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <input name="title" defaultValue={editingEvent.title || editingEvent.name} placeholder="Title" required style={{ width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)' }} />
+                <input name="date" type="date" defaultValue={editingEvent.date} required style={{ width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)' }} />
+                <input name="location" defaultValue={editingEvent.location} placeholder="Location" required style={{ width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)' }} />
+                <input name="category" defaultValue={editingEvent.category || editingEvent.type} placeholder="Category" required style={{ width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)' }} />
+                <div style={{ display: 'flex', gap: '16px' }}>
+                  <input name="capacity" type="number" defaultValue={editingEvent.capacity} placeholder="Capacity" required style={{ flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)' }} />
+                  {user?.role === 'superadmin' && <input name="price" type="number" defaultValue={editingEvent.price} placeholder="Price (INR)" required style={{ flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)' }} />}
+                </div>
+                <textarea name="description" defaultValue={editingEvent.description} placeholder="Description" required style={{ width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)', minHeight: '100px' }} />
+                <MetalButton primary type="submit" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Changes'}</MetalButton>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {editingProduct && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-mid)', borderRadius: 'var(--radius-xl)', width: '100%', maxWidth: '600px', padding: '40px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
+              <button onClick={() => setEditingProduct(null)} style={{ position: 'absolute', top: '24px', right: '24px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+              <h2 style={{ fontFamily: '"Syne", sans-serif', fontWeight: 700, fontSize: '24px', marginBottom: '24px' }}>Edit Product</h2>
+              <form onSubmit={handleEditProductSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <input name="title" defaultValue={editingProduct.title || editingProduct.name} placeholder="Title" required style={{ width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)' }} />
+                <input name="category" defaultValue={editingProduct.category} placeholder="Category" required style={{ width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)' }} />
+                <div style={{ display: 'flex', gap: '16px' }}>
+                  <input name="stock" type="number" defaultValue={editingProduct.stock} placeholder="Stock" required style={{ flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)' }} />
+                  {user?.role === 'superadmin' && <input name="price" type="number" defaultValue={editingProduct.price} placeholder="Price (INR)" required style={{ flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)' }} />}
+                </div>
+                <input name="sizes" defaultValue={typeof editingProduct.sizes === 'string' ? editingProduct.sizes : (editingProduct.sizes?.map(s => s.label).join(', ') || '')} placeholder="Sizes (comma separated, e.g. S, M, L)" style={{ width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)' }} />
+                <textarea name="description" defaultValue={typeof editingProduct.description === 'string' ? editingProduct.description : (editingProduct.description?.join('\n') || '')} placeholder="Description" required style={{ width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border-mid)', color: 'var(--text-primary)', minHeight: '100px' }} />
+                <MetalButton primary type="submit" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Changes'}</MetalButton>
+              </form>
             </motion.div>
           </div>
         )}
