@@ -16,8 +16,7 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      useAuthStore.getState().logout();
-      window.location.href = '/login';
+      useAuthStore.setState({ user: null, isAuthenticated: false });
     } else if (error.response && error.response.status === 403) {
       window.location.href = '/unauthorized';
     }
