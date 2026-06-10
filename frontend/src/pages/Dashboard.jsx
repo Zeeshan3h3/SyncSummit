@@ -53,15 +53,17 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user) return;
     const fetchUserData = async () => {
+      console.log('[Dashboard] Fetching user data...');
       try {
          const [ordersRes, eventsRes] = await Promise.all([
-            axiosInstance.get('/orders/myorders').catch(() => ({ data: null })),
-            axiosInstance.get('/events/myevents').catch(() => ({ data: null }))
+            axiosInstance.get('/orders/myorders').catch((err) => { console.error('[Dashboard] /orders/myorders failed:', err); return { data: null }; }),
+            axiosInstance.get('/events/myevents').catch((err) => { console.error('[Dashboard] /events/myevents failed:', err); return { data: null }; })
          ]);
+         console.log('[Dashboard] Data received:', { orders: ordersRes.data, events: eventsRes.data });
          if (ordersRes.data) setOrders(ordersRes.data);
          if (eventsRes.data) setEvents(eventsRes.data);
       } catch (err) {
-         console.error('Failed to fetch user data', err);
+         console.error('[Dashboard] Unexpected error fetching user data:', err);
       }
     };
     fetchUserData();

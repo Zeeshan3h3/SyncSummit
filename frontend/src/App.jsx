@@ -29,18 +29,22 @@ const App = () => {
   // On app mount (useEffect with empty dependency array):
   useEffect(() => {
     const checkAuth = async () => {
+      console.log('[App] Starting /auth/me check...');
       // Set isLoading to true before the check starts
       setLoading(true);
       try {
         // Call GET /api/auth/me using the axios instance
         const response = await axiosInstance.get('/auth/me');
+        console.log('[App] /auth/me success. Setting user state.');
         // If response is 200: Call setAuth with the returned user and token
         setAuth(response.data.user, response.data.token);
       } catch (error) {
+        console.error('[App] /auth/me failed. Logging out user.', error.response?.data || error.message);
         // If response is 401 or any error: Call logout() to clear any stale state
         logout();
       } finally {
         // Finally (whether success or error): Call setLoading(false)
+        console.log('[App] Auth check complete.');
         setLoading(false);
       }
     };

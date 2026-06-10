@@ -20,7 +20,7 @@ router.post('/register', async (req, res, next) => {
   try {
     const user = await User.create(req.body);
     const token = sendToken(user, res);
-    res.status(201).json({ user: { id: user._id, name: user.name, role: user.role }, token });
+    res.status(201).json({ user: { id: user._id, name: user.name, role: user.role, createdAt: user.createdAt, lastLogin: user.lastLogin }, token });
   } catch(err) {
     if (err.code === 11000) {
       return res.status(400).json({ error: 'An account with this email already exists' });
@@ -35,8 +35,12 @@ router.post('/login', async (req, res, next) => {
     const user = await User.findOne({ email });
     if (!user || !(await user.comparePassword(password)))
       return res.status(401).json({ error: 'Invalid credentials' });
+    
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
+
     const token = sendToken(user, res);
-    res.json({ user: { id: user._id, name: user.name, role: user.role }, token });
+    res.json({ user: { id: user._id, name: user.name, role: user.role, createdAt: user.createdAt, lastLogin: user.lastLogin }, token });
   } catch(err) { next(err); }
 });
 
@@ -52,7 +56,9 @@ router.get('/me', authenticate, (req, res) => {
     user: { 
       id: req.user._id, 
       name: req.user.name, 
-      role: req.user.role 
+      role: req.user.role,
+      createdAt: req.user.createdAt,
+      lastLogin: req.user.lastLogin
     },
     token: currentToken
   });

@@ -185,7 +185,7 @@ const RoleManagementTab = () => {
                 <td style={{ padding: '16px', fontFamily: 'DM Sans', fontSize: '14px', color: 'var(--text-primary)' }}>{u.name}</td>
                 <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-secondary)' }}>{u.email}</td>
                 <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-secondary)' }}>{new Date(u.createdAt).toLocaleDateString()}</td>
-                <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-secondary)' }}>-</td>
+                <td style={{ padding: '16px', fontFamily: 'JetBrains Mono', fontSize: '13px', color: 'var(--text-secondary)' }}>{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}</td>
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{
@@ -569,9 +569,19 @@ const ContentManagementTab = () => {
     e.preventDefault();
     try {
       await axiosInstance.post('/event', {
-        ...eventData,
+        name: eventData.title,
+        type: eventData.category,
+        date: eventData.date,
+        venue: eventData.location,
+        capacity: Number(eventData.capacity),
+        description: eventData.description,
+        imageUrl: eventData.image,
         price: Number(eventData.price),
-        capacity: Number(eventData.capacity)
+        team_size: 'Solo / Team',
+        schedule: [],
+        prizes: [],
+        organizers: [],
+        sponsors: []
       });
       toast.success('Event created successfully');
       setEventData({ title: '', date: '', location: '', category: '', price: '', capacity: '', description: '', image: '' });

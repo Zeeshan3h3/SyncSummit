@@ -70,19 +70,22 @@ const AdminDashboard = () => {
   // Fetch logic
   useEffect(() => {
     const fetchAdminData = async () => {
+      console.log('[AdminDashboard] Fetching admin data...');
       try {
         setLoading(true);
         const [statsRes, usersRes, ordersRes] = await Promise.all([
-           axiosInstance.get('/admin/stats').catch(() => ({ data: null })),
-           axiosInstance.get('/admin/users').catch(() => ({ data: null })),
-           axiosInstance.get('/admin/orders').catch(() => ({ data: null }))
+           axiosInstance.get('/admin/stats').catch((err) => { console.error('[AdminDashboard] /admin/stats failed:', err); return { data: null }; }),
+           axiosInstance.get('/admin/users').catch((err) => { console.error('[AdminDashboard] /admin/users failed:', err); return { data: null }; }),
+           axiosInstance.get('/admin/orders').catch((err) => { console.error('[AdminDashboard] /admin/orders failed:', err); return { data: null }; })
         ]);
+        
+        console.log('[AdminDashboard] Data received:', { stats: statsRes.data, users: usersRes.data, orders: ordersRes.data });
         
         if (statsRes.data) setStats(prev => ({...prev, ...statsRes.data}));
         if (usersRes.data) setUsers(usersRes.data);
         if (ordersRes.data) setOrders(ordersRes.data);
       } catch (error) {
-        console.error('Failed to fetch admin data:', error);
+        console.error('[AdminDashboard] Unexpected error fetching admin data:', error);
       } finally {
         setLoading(false);
       }
